@@ -1,0 +1,55 @@
+<section class="page-stack">
+  <div class="page-hero compact">
+    <div>
+      <span class="eyebrow">Appointment operations</span>
+      <h1>Review and manage platform appointments.</h1>
+      <p>Admins can monitor upcoming visits and remove invalid or stale entries.</p>
+    </div>
+  </div>
+
+  <article class="section-card">
+    <div class="section-header">
+      <div>
+        <span class="eyebrow">Visit ledger</span>
+        <h2>All appointments</h2>
+      </div>
+      <span class="pill">{{ appointments().length }}</span>
+    </div>
+
+    <div class="table-card" *ngIf="appointments().length; else noAppointments">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Customer</th>
+            <th>Vet</th>
+            <th>Reason</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let visit of appointments()">
+            <td>{{ visit.visitDate }}</td>
+            <td>{{ visit.timeSlot }}</td>
+            <td>{{ customerName(visit.customerId) }}</td>
+            <td>{{ vetName(visit.vetId) }}</td>
+            <td>{{ visit.reason }}</td>
+            <td>
+              <button class="ghost-button small danger" type="button" (click)="deleteVisit(visit.id)">
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noAppointments>
+      <div class="empty-state">
+        <strong>No appointments found</strong>
+        <span>Appointments will appear here once the platform starts receiving bookings.</span>
+      </div>
+    </ng-template>
+  </article>
+</section>

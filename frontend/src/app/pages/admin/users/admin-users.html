@@ -1,0 +1,236 @@
+<section class="page-stack">
+  <div class="page-hero compact">
+    <div>
+      <span class="eyebrow">User management</span>
+      <h1>Review customer and veterinarian directories.</h1>
+      <p>The admin view focuses on visibility and operational context.</p>
+    </div>
+  </div>
+
+  <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+  <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+  <div class="page-stack">
+    <article class="section-card">
+      <button class="section-header button-reset section-toggle" type="button" (click)="toggleCustomersSection()">
+        <div>
+          <span class="eyebrow">Customers</span>
+          <h2>Customers {{ customersExpanded() ? '▲' : '▼' }}</h2>
+        </div>
+        <span class="pill">{{ customers().length }}</span>
+      </button>
+
+      <div *ngIf="customersExpanded()">
+        <div class="table-card" *ngIf="customers().length; else noCustomers">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let customer of customers()">
+                <td>{{ customer.name }}</td>
+                <td>{{ customer.email }}</td>
+                <td>{{ customer.phone }}</td>
+                <td>
+                  <div class="table-actions">
+                    <button class="secondary-button small" type="button" (click)="openCustomerPets(customer)">View Pets</button>
+                    <button class="secondary-button small" type="button" (click)="startCustomerEdit(customer)">Edit</button>
+                    <button class="ghost-button small danger" type="button" (click)="deleteCustomer(customer)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ng-template #noCustomers>
+        <div class="empty-state compact">
+          <strong>No customers found</strong>
+          <span>Customer accounts will appear here when available.</span>
+        </div>
+      </ng-template>
+    </article>
+
+    <article class="section-card accent">
+      <button class="section-header button-reset section-toggle" type="button" (click)="toggleVetsSection()">
+        <div>
+          <span class="eyebrow">Veterinarians</span>
+          <h2>Veterinarians {{ vetsExpanded() ? '▲' : '▼' }}</h2>
+        </div>
+        <span class="pill">{{ vets().length }}</span>
+      </button>
+
+      <div *ngIf="vetsExpanded()">
+        <div class="table-card" *ngIf="vets().length; else noVets">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Specialization</th>
+                <th>Contact</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let vet of vets()">
+                <td>{{ vet.name }}</td>
+                <td>{{ vet.specialization }}</td>
+                <td>{{ vet.phone }}</td>
+                <td>
+                  <div class="table-actions">
+                    <button class="secondary-button small" type="button" (click)="startVetEdit(vet)">Edit</button>
+                    <button class="ghost-button small danger" type="button" (click)="deleteVet(vet)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ng-template #noVets>
+        <div class="empty-state compact">
+          <strong>No veterinarians found</strong>
+          <span>Vet accounts will appear here when available.</span>
+        </div>
+      </ng-template>
+    </article>
+  </div>
+
+  <app-modal
+    [open]="!!petsCustomer()"
+    title="Customer pets"
+    eyebrow="Linked profiles"
+    [compact]="true"
+    (close)="closeCustomerPets()"
+  >
+    <div class="modal-stack" *ngIf="petsCustomer() as customer">
+      <div class="detail-panel soft">
+        <strong>{{ customer.name }}</strong>
+        <span>{{ customer.email }}</span>
+      </div>
+
+      <div class="pet-grid" *ngIf="selectedCustomerPets().length; else noCustomerPets">
+        <article class="pet-card-large" *ngFor="let pet of selectedCustomerPets()">
+          <div class="pet-media large" *ngIf="pet.imageUrl; else adminPetFallback">
+            <img [src]="pet.imageUrl" [alt]="pet.name" />
+          </div>
+          <ng-template #adminPetFallback>
+            <div class="pet-media large placeholder">{{ pet.name.charAt(0) }}</div>
+          </ng-template>
+          <div class="pet-meta">
+            <strong>{{ pet.name }}</strong>
+            <span>{{ pet.type }}</span>
+            <small>{{ pet.age }} years old</small>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #noCustomerPets>
+        <div class="empty-state compact">
+          <strong>No pets added yet 🐾</strong>
+          <span>This customer has not created any pet profiles.</span>
+        </div>
+      </ng-template>
+    </div>
+  </app-modal>
+
+  <app-modal
+    [open]="!!editingCustomer()"
+    title="Edit customer"
+    eyebrow="Account update"
+    (close)="closeCustomerEdit()"
+  >
+    <form class="app-form" [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
+      <div class="form-grid two">
+        <label class="field">
+          <span>Username</span>
+          <input type="text" formControlName="username" />
+        </label>
+        <label class="field">
+          <span>Name</span>
+          <input type="text" formControlName="name" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" formControlName="email" />
+        </label>
+        <label class="field">
+          <span>Phone</span>
+          <input type="text" formControlName="phone" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Address</span>
+        <textarea rows="3" formControlName="address"></textarea>
+      </label>
+
+      <button class="primary-button" type="submit">
+        {{ saving() ? 'Saving...' : 'Save customer' }}
+      </button>
+    </form>
+  </app-modal>
+
+  <app-modal
+    [open]="!!editingVet()"
+    title="Edit vet"
+    eyebrow="Profile update"
+    (close)="closeVetEdit()"
+  >
+    <form class="app-form" [formGroup]="vetForm" (ngSubmit)="saveVet()">
+      <div class="form-grid two">
+        <label class="field">
+          <span>Username</span>
+          <input type="text" formControlName="username" />
+        </label>
+        <label class="field">
+          <span>Name</span>
+          <input type="text" formControlName="name" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" formControlName="email" />
+        </label>
+        <label class="field">
+          <span>Phone</span>
+          <input type="text" formControlName="phone" />
+        </label>
+        <label class="field">
+          <span>Specialization</span>
+          <input type="text" formControlName="specialization" />
+        </label>
+        <label class="field">
+          <span>Experience</span>
+          <input type="number" min="0" formControlName="experience" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Clinic address</span>
+        <textarea rows="3" formControlName="clinicAddress"></textarea>
+      </label>
+
+      <div class="form-grid two">
+        <label class="field">
+          <span>Available days</span>
+          <input type="text" formControlName="availableDays" />
+        </label>
+        <label class="field">
+          <span>Available time</span>
+          <input type="text" formControlName="availableTime" />
+        </label>
+      </div>
+
+      <button class="primary-button" type="submit">
+        {{ saving() ? 'Saving...' : 'Save vet' }}
+      </button>
+    </form>
+  </app-modal>
+</section>

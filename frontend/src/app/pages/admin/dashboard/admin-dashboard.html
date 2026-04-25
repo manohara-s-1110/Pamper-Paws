@@ -1,0 +1,56 @@
+<section class="page-stack">
+  <div class="page-hero">
+    <div>
+      <span class="eyebrow">Admin command center</span>
+      <h1>Platform visibility without clutter.</h1>
+      <p>
+        Monitor operational health across customers, veterinary staff, and
+        appointments from one high-level control surface.
+      </p>
+    </div>
+  </div>
+
+  <div class="dashboard-grid four">
+    <article class="stat-card">
+      <span>Customers</span>
+      <strong>{{ customers().length }}</strong>
+      <small>Registered pet parents</small>
+    </article>
+    <article class="stat-card">
+      <span>Veterinarians</span>
+      <strong>{{ vets().length }}</strong>
+      <small>Active professionals</small>
+    </article>
+    <article class="stat-card accent">
+      <span>Appointments</span>
+      <strong>{{ visits().length }}</strong>
+      <small>Total scheduled visits</small>
+    </article>
+    <article class="stat-card">
+      <span>Avg. load per vet</span>
+      <strong>{{ vets().length ? (visits().length / vets().length).toFixed(1) : '0.0' }}</strong>
+      <small>Visits assigned on average</small>
+    </article>
+  </div>
+
+  <article class="section-card">
+    <div class="section-header">
+      <div>
+        <span class="eyebrow">Workload view</span>
+        <h2>Appointments by veterinarian</h2>
+      </div>
+    </div>
+
+    <div class="bar-list">
+      <article class="bar-row" *ngFor="let entry of vetStats()">
+        <div class="bar-labels">
+          <strong>{{ entry.name }}</strong>
+          <span>{{ entry.visits }} visits</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" [style.width.%]="visits().length ? (entry.visits / visits().length) * 100 : 0"></div>
+        </div>
+      </article>
+    </div>
+  </article>
+</section>

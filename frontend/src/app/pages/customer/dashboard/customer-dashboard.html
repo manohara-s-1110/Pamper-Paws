@@ -1,0 +1,110 @@
+<section class="page-stack" *ngIf="customer() as currentCustomer">
+  <div class="page-hero">
+    <div>
+      <span class="eyebrow">Customer portal</span>
+      <h1>Hello, {{ currentCustomer.name }}.</h1>
+      <p>
+        Keep track of your pets, appointments, and account details from one
+        calm workspace.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a class="primary-button" routerLink="/customer/pets">Manage pets</a>
+      <a class="secondary-button" routerLink="/customer/appointments">Book a visit</a>
+    </div>
+  </div>
+
+  <div class="dashboard-grid four">
+    <article class="stat-card">
+      <span>Total pets</span>
+      <strong>{{ pets().length }}</strong>
+      <small>Profiles stored in your care space</small>
+    </article>
+    <article class="stat-card">
+      <span>Appointments</span>
+      <strong>{{ appointments().length }}</strong>
+      <small>Visits booked with the clinic</small>
+    </article>
+    <article class="stat-card accent">
+      <span>Upcoming</span>
+      <strong>{{ upcomingAppointments().length }}</strong>
+      <small>Upcoming visits ready to attend</small>
+    </article>
+    <article class="stat-card highlight">
+      <span>Next appointment</span>
+      <ng-container *ngIf="nextAppointment() as next; else noNextVisit">
+        <strong>{{ petName(next.petId) }}</strong>
+        <small>{{ vetDirectory()[next.vetId]?.name || ('Vet #' + next.vetId) }} · {{ next.timeSlot }}</small>
+      </ng-container>
+      <ng-template #noNextVisit>
+        <strong>You’re all set!</strong>
+        <small>No upcoming visit is on the calendar.</small>
+      </ng-template>
+    </article>
+  </div>
+
+  <div class="content-grid two">
+    <article class="section-card">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Pet profiles</span>
+          <h2>Your companions</h2>
+        </div>
+        <a class="text-link" routerLink="/customer/pets">View all</a>
+      </div>
+
+      <div class="pet-grid" *ngIf="pets().length; else noPets">
+        <article class="pet-tile" *ngFor="let pet of pets().slice(0, 3)">
+          <div class="pet-media" *ngIf="pet.imageUrl; else petInitial">
+            <img [src]="pet.imageUrl" [alt]="pet.name" />
+          </div>
+          <ng-template #petInitial>
+            <div class="pet-media placeholder">{{ pet.name.charAt(0) }}</div>
+          </ng-template>
+          <div>
+            <strong>{{ pet.name }}</strong>
+            <span>{{ pet.type }} · {{ pet.age }} years</span>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #noPets>
+        <div class="empty-state">
+          <strong>No pets added yet 🐾</strong>
+          <span>Start by creating a pet profile with photo, breed, and age.</span>
+        </div>
+      </ng-template>
+    </article>
+
+    <article class="section-card accent">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Visits</span>
+          <h2>Upcoming appointments</h2>
+        </div>
+        <a class="text-link" routerLink="/customer/appointments">Manage</a>
+      </div>
+
+      <div class="timeline-list" *ngIf="upcomingAppointments().length; else noAppointments">
+        <article class="timeline-item" *ngFor="let visit of upcomingAppointments()">
+          <div class="timeline-date">
+            <strong>{{ visit.visitDate | date: 'dd' }}</strong>
+            <span>{{ visit.visitDate | date: 'MMM' }}</span>
+          </div>
+          <div class="timeline-copy">
+            <strong>{{ vetDirectory()[visit.vetId]?.name || ('Vet #' + visit.vetId) }}</strong>
+            <span>{{ visit.timeSlot }}</span>
+            <p>{{ visit.reason }}</p>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #noAppointments>
+        <div class="empty-state compact">
+          <strong>You’re all set!</strong>
+          <span>Book a visit whenever your pet needs consultation or follow-up care.</span>
+        </div>
+      </ng-template>
+    </article>
+  </div>
+</section>

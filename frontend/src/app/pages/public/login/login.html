@@ -1,0 +1,55 @@
+<section class="auth-shell">
+  <aside class="auth-spotlight">
+    <span class="eyebrow">Secure access</span>
+    <h1>Welcome back to Pamper Paws.</h1>
+    <p>
+      Sign in once and land directly in the workspace built for your role,
+      whether you’re a pet parent, veterinarian, or platform admin.
+    </p>
+
+    <div class="auth-highlight-list">
+      <article>
+        <strong>Customer</strong>
+        <span>Manage pets, appointments, and profile details.</span>
+      </article>
+      <article>
+        <strong>Vet</strong>
+        <span>Review bookings, update availability, and stay on schedule.</span>
+      </article>
+      <article>
+        <strong>Admin</strong>
+        <span>Track platform activity across users, vets, and visits.</span>
+      </article>
+    </div>
+  </aside>
+
+  <div class="auth-card">
+    <div class="auth-card-copy">
+      <span class="eyebrow">Sign in</span>
+      <h2>Access your portal</h2>
+      <p>Use the credentials issued for your account.</p>
+    </div>
+
+    <form class="app-form" [formGroup]="form" (ngSubmit)="login()">
+      <label class="field">
+        <span>Username</span>
+        <input type="text" formControlName="username" placeholder="Enter your username" />
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input type="password" formControlName="password" placeholder="Enter your password" />
+      </label>
+
+      <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+      <button class="primary-button block" type="submit">
+        {{ submitting() ? 'Signing in...' : 'Sign in' }}
+      </button>
+    </form>
+
+    <p class="auth-footnote">
+      New here? <a routerLink="/register">Create a customer or vet account</a>
+    </p>
+  </div>
+</section>

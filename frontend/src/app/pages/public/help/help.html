@@ -1,0 +1,26 @@
+<section class="static-shell">
+  <div class="page-hero compact">
+    <span class="eyebrow">Help center</span>
+    <h1>Answers for the most common workflows.</h1>
+    <p>
+      Use this guide for registration, login, appointments, and role-specific
+      navigation inside the platform.
+    </p>
+  </div>
+
+  <div class="faq-list">
+    <article class="faq-card" *ngFor="let item of faqs(); let i = index">
+      <button type="button" class="faq-trigger" (click)="toggle(i)">
+        <span>{{ item.question }}</span>
+        <span>{{ item.open ? 'Close' : 'Open' }}</span>
+      </button>
+      <p class="faq-answer" *ngIf="item.open">{{ item.answer }}</p>
+    </article>
+  </div>
+
+  <div class="section-card accent">
+    <h2>Still stuck?</h2>
+    <p>Our support team can help with access, operations, or workflow issues.</p>
+    <a class="secondary-button" routerLink="/contact">Contact support</a>
+  </div>
+</section>

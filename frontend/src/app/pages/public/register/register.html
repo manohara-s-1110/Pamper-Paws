@@ -1,0 +1,107 @@
+<section class="auth-shell">
+  <aside class="auth-spotlight register">
+    <span class="eyebrow">Create access</span>
+    <h1>Register as a customer or veterinarian.</h1>
+    <p>
+      Admin accounts remain controlled internally, but customer and vet
+      onboarding is open through this experience.
+    </p>
+  </aside>
+
+  <div class="auth-card wide">
+    <div class="auth-card-copy">
+      <span class="eyebrow">Registration</span>
+      <h2>Choose your role</h2>
+      <p>Only customer and veterinarian registrations are available here.</p>
+    </div>
+
+    <div class="role-switch">
+      <button
+        type="button"
+        class="role-chip"
+        [class.active]="activeRole() === 'CUSTOMER'"
+        (click)="selectRole('CUSTOMER')"
+      >
+        Customer
+      </button>
+      <button
+        type="button"
+        class="role-chip"
+        [class.active]="activeRole() === 'VET'"
+        (click)="selectRole('VET')"
+      >
+        Veterinarian
+      </button>
+    </div>
+
+    <form class="app-form" [formGroup]="form" (ngSubmit)="register()">
+      <div class="form-grid two">
+        <label class="field">
+          <span>Username</span>
+          <input type="text" formControlName="username" placeholder="Choose a username" />
+        </label>
+        <label class="field">
+          <span>Full name</span>
+          <input type="text" formControlName="name" placeholder="Enter your full name" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" formControlName="email" placeholder="Enter your email" />
+        </label>
+        <label class="field">
+          <span>Phone</span>
+          <input type="tel" formControlName="phone" placeholder="10-digit mobile number" />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" formControlName="password" placeholder="Create a password" />
+        </label>
+        <label class="field">
+          <span>Confirm password</span>
+          <input type="password" formControlName="confirmPassword" placeholder="Repeat the password" />
+        </label>
+      </div>
+
+      <div class="form-grid two" *ngIf="activeRole() === 'CUSTOMER'">
+        <label class="field full">
+          <span>Address</span>
+          <textarea formControlName="address" rows="3" placeholder="Enter your address"></textarea>
+        </label>
+      </div>
+
+      <div class="form-grid two" *ngIf="activeRole() === 'VET'">
+        <label class="field">
+          <span>Specialization</span>
+          <input type="text" formControlName="specialization" placeholder="Small animals, surgery, dermatology..." />
+        </label>
+        <label class="field">
+          <span>Experience</span>
+          <input type="number" min="0" formControlName="experience" placeholder="Years of experience" />
+        </label>
+        <label class="field full">
+          <span>Clinic address</span>
+          <textarea formControlName="clinicAddress" rows="3" placeholder="Clinic or hospital address"></textarea>
+        </label>
+        <label class="field">
+          <span>Available days</span>
+          <input type="text" formControlName="availableDays" placeholder="Mon-Fri, Sat-Sun..." />
+        </label>
+        <label class="field">
+          <span>Available time</span>
+          <input type="text" formControlName="availableTime" placeholder="9 AM - 5 PM" />
+        </label>
+      </div>
+
+      <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+      <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+      <button class="primary-button block" type="submit">
+        {{ submitting() ? 'Creating account...' : 'Create ' + roleLabel() + ' account' }}
+      </button>
+    </form>
+
+    <p class="auth-footnote">
+      Already registered? <a routerLink="/login">Sign in here</a>
+    </p>
+  </div>
+</section>

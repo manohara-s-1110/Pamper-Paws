@@ -1,0 +1,60 @@
+<section class="page-stack" *ngIf="vet()">
+  <div class="page-hero compact">
+    <div>
+      <span class="eyebrow">Availability</span>
+      <h1>Set clinic rhythm and working hours.</h1>
+      <p>
+        These values power the customer booking flow and determine the time
+        slots generated for your profile.
+      </p>
+    </div>
+  </div>
+
+  <article class="section-card narrow">
+    <form class="app-form" [formGroup]="form" (ngSubmit)="saveAvailability()">
+      <div class="field">
+        <span>Available days</span>
+        <div class="day-toggle-grid">
+          <button
+            *ngFor="let day of dayOptions"
+            class="day-toggle"
+            type="button"
+            [ngClass]="{ selected: isDaySelected(day) }"
+            (click)="toggleDay(day)">
+            {{ day }}
+          </button>
+        </div>
+      </div>
+
+      <div class="form-grid two">
+        <label class="field">
+          <span>Start time</span>
+          <select formControlName="startTime">
+            <option value="">Select start time</option>
+            <option *ngFor="let time of timeOptions" [value]="time">{{ time }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>End time</span>
+          <select formControlName="endTime">
+            <option value="">Select end time</option>
+            <option *ngFor="let time of timeOptions" [value]="time">{{ time }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="availability-summary">
+        <strong>Selected schedule</strong>
+        <span>{{ availabilitySummary() }}</span>
+      </div>
+
+      <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+      <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+      <button class="primary-button block" type="submit">
+        {{ saving() ? 'Saving...' : 'Save / Update availability' }}
+      </button>
+    </form>
+  </article>
+</section>

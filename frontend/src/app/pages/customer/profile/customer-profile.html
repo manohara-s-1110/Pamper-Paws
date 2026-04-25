@@ -1,0 +1,76 @@
+<section class="page-stack" *ngIf="customer() as currentCustomer">
+  <div class="page-hero compact">
+    <div>
+      <span class="eyebrow">Account profile</span>
+      <h1>Keep your details current.</h1>
+      <p>
+        Your profile information is used across bookings, pet ownership, and
+        clinic communication.
+      </p>
+    </div>
+  </div>
+
+  <div class="content-grid two">
+    <article class="section-card accent">
+      <span class="eyebrow">Snapshot</span>
+      <h2>{{ currentCustomer.name }}</h2>
+      <div class="info-stack">
+        <div>
+          <strong>Username</strong>
+          <span>{{ currentCustomer.username }}</span>
+        </div>
+        <div>
+          <strong>Email</strong>
+          <span>{{ currentCustomer.email }}</span>
+        </div>
+        <div>
+          <strong>Phone</strong>
+          <span>{{ currentCustomer.phone }}</span>
+        </div>
+        <div>
+          <strong>Address</strong>
+          <span>{{ currentCustomer.address }}</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="section-card">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Edit profile</span>
+          <h2>Update contact details</h2>
+        </div>
+      </div>
+
+      <form class="app-form" [formGroup]="form" (ngSubmit)="saveProfile()">
+        <label class="field">
+          <span>Username</span>
+          <input type="text" formControlName="username" readonly />
+        </label>
+        <label class="field">
+          <span>Full name</span>
+          <input type="text" formControlName="name" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" formControlName="email" />
+        </label>
+        <label class="field">
+          <span>Phone</span>
+          <input type="tel" formControlName="phone" />
+        </label>
+        <label class="field">
+          <span>Address</span>
+          <textarea formControlName="address" rows="4"></textarea>
+        </label>
+
+        <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+        <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+        <button class="primary-button block" type="submit">
+          {{ saving() ? 'Saving...' : 'Save profile' }}
+        </button>
+      </form>
+    </article>
+  </div>
+</section>
