@@ -21,6 +21,9 @@ export class CustomerProfileComponent {
   readonly statusMessage = signal('');
   readonly errorMessage = signal('');
   readonly saving = signal(false);
+  readonly passwordStatusMessage = signal('');
+  readonly passwordErrorMessage = signal('');
+  readonly changingPassword = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     username: [{ value: '', disabled: true }],
@@ -28,6 +31,12 @@ export class CustomerProfileComponent {
     email: ['', [Validators.required, Validators.email]],
     phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
     address: ['', Validators.required],
+  });
+
+  readonly passwordForm = this.fb.nonNullable.group({
+    currentPassword: ['', Validators.required],
+    newPassword: ['', [Validators.required, Validators.minLength(6)]],
+    confirmPassword: ['', Validators.required],
   });
 
   constructor() {
@@ -62,6 +71,45 @@ export class CustomerProfileComponent {
         error: () => {
           this.saving.set(false);
           this.errorMessage.set('Unable to save profile changes right now.');
+        },
+      });
+  }
+
+  changePassword() {
+    if (this.passwordForm.invalid || this.changingPassword()) {
+      this.passwordForm.markAllAsTouched();
+      return;
+    }
+
+    this.passwordStatusMessage.set('');
+    this.passwordErrorMessage.set('');
+
+    const values = this.passwordForm.getRawValue();
+    if (values.newPassword !== values.confirmPassword) {
+      this.passwordErrorMessage.set('New password and confirmation do not match.');
+      return;
+    }
+
+    this.changingPassword.set(true);
+
+    this.auth
+      .changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      })
+      .subscribe({
+        next: (message) => {
+          this.changingPassword.set(false);
+          this.passwordStatusMessage.set(message);
+          this.passwordForm.reset({
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: '',
+          });
+        },
+        error: (error) => {
+          this.changingPassword.set(false);
+          this.passwordErrorMessage.set(error?.error?.message ?? 'Unable to update password right now.');
         },
       });
   }

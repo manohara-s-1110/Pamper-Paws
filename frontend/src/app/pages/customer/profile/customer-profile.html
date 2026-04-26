@@ -73,4 +73,37 @@
       </form>
     </article>
   </div>
+
+  <article class="section-card narrow">
+    <div class="section-header">
+      <div>
+        <span class="eyebrow">Security</span>
+        <h2>Change password</h2>
+      </div>
+    </div>
+
+    <form class="app-form" [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+      <div class="form-grid two">
+        <label class="field">
+          <span>Current password</span>
+          <input type="password" formControlName="currentPassword" />
+        </label>
+        <label class="field">
+          <span>New password</span>
+          <input type="password" formControlName="newPassword" />
+        </label>
+        <label class="field full">
+          <span>Confirm new password</span>
+          <input type="password" formControlName="confirmPassword" />
+        </label>
+      </div>
+
+      <p class="form-message success" *ngIf="passwordStatusMessage()">{{ passwordStatusMessage() }}</p>
+      <p class="form-message error" *ngIf="passwordErrorMessage()">{{ passwordErrorMessage() }}</p>
+
+      <button class="primary-button block" type="submit">
+        {{ changingPassword() ? 'Updating...' : 'Change password' }}
+      </button>
+    </form>
+  </article>
 </section>
