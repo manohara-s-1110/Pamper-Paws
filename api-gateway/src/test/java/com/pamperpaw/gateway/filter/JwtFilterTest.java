@@ -22,7 +22,7 @@ class JwtFilterTest {
 
     @Test
     void allowAuthEndpointsWithoutToken() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.post("/auth/login").build()
@@ -39,7 +39,7 @@ class JwtFilterTest {
 
     @Test
     void allowRegisterEndpointWithoutToken() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.post("/auth/register").build()
@@ -56,7 +56,7 @@ class JwtFilterTest {
 
     @Test
     void rejectProtectedEndpointWithoutToken() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/customers/1").build()
@@ -69,7 +69,7 @@ class JwtFilterTest {
 
     @Test
     void rejectProtectedEndpointWithInvalidToken() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/customers/1")
@@ -83,12 +83,12 @@ class JwtFilterTest {
     }
 
     @Test
-    void allowCustomerRoleToCustomerEndpoint() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+    void allowCustomerRoleToOwnProfileLookupEndpoint() {
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         String token = tokenForRole("CUSTOMER");
         MockServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/customers/1")
+                MockServerHttpRequest.get("/customers/username/testuser")
                         .header("Authorization", "Bearer " + token)
                         .build()
         );
@@ -104,7 +104,7 @@ class JwtFilterTest {
 
     @Test
     void allowAdminRoleToAdminEndpoint() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         String token = tokenForRole("ADMIN");
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -124,7 +124,7 @@ class JwtFilterTest {
 
     @Test
     void rejectCustomerRoleToAdminEndpoint() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         String token = tokenForRole("CUSTOMER");
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -139,12 +139,12 @@ class JwtFilterTest {
     }
 
     @Test
-    void allowVetRoleToVetEndpoint() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+    void allowVetRoleToOwnProfileLookupEndpoint() {
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         String token = tokenForRole("VET");
         MockServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/vets/1")
+                MockServerHttpRequest.get("/vets/username/testvet")
                         .header("Authorization", "Bearer " + token)
                         .build()
         );
@@ -160,7 +160,7 @@ class JwtFilterTest {
 
     @Test
     void rejectVetRoleToCustomerEndpoint() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         String token = tokenForRole("VET");
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -175,8 +175,8 @@ class JwtFilterTest {
     }
 
     @Test
-    void allowUnknownRoleToFallThrough() {
-        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET));
+    void rejectUnknownRole() {
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
         String token = tokenForRole("GUEST");
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -184,14 +184,9 @@ class JwtFilterTest {
                         .header("Authorization", "Bearer " + token)
                         .build()
         );
-        GatewayFilterChain chain = e -> {
-            e.getAttributes().put("passed", true);
-            return Mono.empty();
-        };
+        filter.filter(exchange, e -> Mono.empty()).block();
 
-        filter.filter(exchange, chain).block();
-
-        assertTrue(Boolean.TRUE.equals(exchange.getAttribute("passed")));
+        assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode());
     }
 
     private String tokenForRole(String role) {

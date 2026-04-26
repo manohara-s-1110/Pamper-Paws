@@ -4,7 +4,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { UserRole } from '../../../models/app.models';
-import { CustomerDataService } from '../../../services/customer-data';
 import { SessionAuthService } from '../../../services/session-auth';
 
 @Component({
@@ -16,7 +15,6 @@ import { SessionAuthService } from '../../../services/session-auth';
 export class PublicRegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(SessionAuthService);
-  private readonly customers = inject(CustomerDataService);
   private readonly router = inject(Router);
 
   readonly activeRole = signal<UserRole>('CUSTOMER');
@@ -42,14 +40,22 @@ export class PublicRegisterComponent {
     availableTime: [''],
   });
 
+  constructor() {
+    this.applyRoleValidators(this.activeRole());
+  }
+
   selectRole(role: UserRole) {
     this.activeRole.set(role);
     this.statusMessage.set('');
     this.errorMessage.set('');
+    this.applyRoleValidators(role);
   }
 
   register() {
     if (this.form.invalid || this.submitting()) {
+      if (!this.submitting()) {
+        this.errorMessage.set('Please complete the required fields before continuing.');
+      }
       this.form.markAllAsTouched();
       return;
     }
@@ -87,22 +93,12 @@ export class PublicRegisterComponent {
           password: values.password,
           role: this.activeRole(),
           name: values.name,
+          email: values.email,
+          phone: values.phone,
+          address: values.address,
         })
         .subscribe({
-          next: () => {
-            this.customers
-              .createCustomer({
-                username: values.username,
-                name: values.name,
-                email: values.email,
-                phone: values.phone,
-                address: values.address,
-              })
-              .subscribe({
-                next: () => this.finishRegistration(),
-                error: () => this.handleRegistrationError('Customer profile creation failed after auth registration.'),
-              });
-          },
+          next: () => this.finishRegistration(),
           error: (error) => {
             this.handleRegistrationError(error?.error?.message ?? 'Registration failed. Please try again.');
           },
@@ -157,5 +153,37 @@ export class PublicRegisterComponent {
   private handleRegistrationError(message: string) {
     this.submitting.set(false);
     this.errorMessage.set(message);
+  }
+
+  private applyRoleValidators(role: UserRole) {
+    const address = this.form.controls.address;
+    const specialization = this.form.controls.specialization;
+    const experience = this.form.controls.experience;
+    const clinicAddress = this.form.controls.clinicAddress;
+    const availableDays = this.form.controls.availableDays;
+    const availableTime = this.form.controls.availableTime;
+
+    if (role === 'CUSTOMER') {
+      address.setValidators([Validators.required]);
+      specialization.clearValidators();
+      experience.clearValidators();
+      clinicAddress.clearValidators();
+      availableDays.clearValidators();
+      availableTime.clearValidators();
+    } else {
+      address.clearValidators();
+      specialization.setValidators([Validators.required]);
+      experience.setValidators([Validators.required, Validators.min(0)]);
+      clinicAddress.setValidators([Validators.required]);
+      availableDays.setValidators([Validators.required]);
+      availableTime.setValidators([Validators.required]);
+    }
+
+    address.updateValueAndValidity({ emitEvent: false });
+    specialization.updateValueAndValidity({ emitEvent: false });
+    experience.updateValueAndValidity({ emitEvent: false });
+    clinicAddress.updateValueAndValidity({ emitEvent: false });
+    availableDays.updateValueAndValidity({ emitEvent: false });
+    availableTime.updateValueAndValidity({ emitEvent: false });
   }
 }

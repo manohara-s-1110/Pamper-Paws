@@ -119,6 +119,7 @@ class CustomerControllerTest {
     private CustomerDTO buildCustomer() {
         CustomerDTO dto = new CustomerDTO();
         dto.setId(1L);
+        dto.setUsername("manu");
         dto.setName("Manu");
         dto.setEmail("manu@test.com");
         dto.setPhone("9876543210");

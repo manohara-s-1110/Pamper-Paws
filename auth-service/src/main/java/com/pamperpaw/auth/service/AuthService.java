@@ -2,8 +2,10 @@ package com.pamperpaw.auth.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pamperpaw.auth.client.CustomerClient;
 import com.pamperpaw.auth.client.VetClient;
 import com.pamperpaw.auth.dto.ChangePasswordRequest;
+import com.pamperpaw.auth.dto.CustomerProfileRequest;
 import com.pamperpaw.auth.dto.LoginRequest;
 import com.pamperpaw.auth.dto.RegisterRequest;
 import com.pamperpaw.auth.dto.VetProfileRequest;
@@ -29,6 +31,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final CustomerClient customerClient;
     private final VetClient vetClient;
     private final ObjectMapper objectMapper;
 
@@ -46,8 +49,23 @@ public class AuthService {
 
         createAuthUser(username, request.getPassword(), role);
 
-        log.info("Registered auth user username={} role={}", username, role);
-        return "User registered successfully";
+        try {
+            customerClient.createCustomer(toCustomerProfileRequest(request, username));
+            log.info("Registered customer across auth and customer services username={}", username);
+            return "User registered successfully";
+        } catch (Exception ex) {
+            if (customerProfileExists(username)) {
+                log.warn("Customer profile already exists after downstream exception for username={}", username, ex);
+                return "User registered successfully";
+            }
+
+            userRepository.deleteByUsername(username);
+            log.error("Rolled back auth registration for customer username={}", username, ex);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    extractServiceError(ex, "Customer profile creation failed and registration was rolled back")
+            );
+        }
     }
 
     public String registerVet(VetRegisterRequest request) {
@@ -144,9 +162,36 @@ public class AuthService {
         return profileRequest;
     }
 
+    private CustomerProfileRequest toCustomerProfileRequest(RegisterRequest request, String username) {
+        validateCustomerProfile(request);
+
+        CustomerProfileRequest profileRequest = new CustomerProfileRequest();
+        profileRequest.setUsername(username);
+        profileRequest.setName(request.getName().trim());
+        profileRequest.setPhone(request.getPhone().trim());
+        profileRequest.setEmail(request.getEmail().trim());
+        profileRequest.setAddress(request.getAddress().trim());
+        return profileRequest;
+    }
+
+    private void validateCustomerProfile(RegisterRequest request) {
+        if (isBlank(request.getEmail()) || isBlank(request.getPhone()) || isBlank(request.getAddress())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email, phone, and address are required for customer registration");
+        }
+    }
+
     private boolean vetProfileExists(String username) {
         try {
             vetClient.getVetByUsername(username);
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    private boolean customerProfileExists(String username) {
+        try {
+            customerClient.getCustomerByUsername(username);
             return true;
         } catch (Exception ex) {
             return false;
@@ -198,5 +243,9 @@ public class AuthService {
 
     private boolean isBcryptHash(String value) {
         return value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

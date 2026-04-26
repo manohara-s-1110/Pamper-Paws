@@ -1,5 +1,8 @@
 package com.pamperpaw.auth.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pamperpaw.auth.client.CustomerClient;
+import com.pamperpaw.auth.client.VetClient;
 import com.pamperpaw.auth.dto.LoginRequest;
 import com.pamperpaw.auth.dto.RegisterRequest;
 import com.pamperpaw.auth.entity.User;
@@ -36,6 +39,15 @@ class AuthServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private CustomerClient customerClient;
+
+    @Mock
+    private VetClient vetClient;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
     @InjectMocks
     private AuthService authService;
 
@@ -46,9 +58,13 @@ class AuthServiceTest {
         request.setPassword("secret");
         request.setRole("customer");
         request.setName("Manu");
+        request.setEmail("manu@example.com");
+        request.setPhone("9876543210");
+        request.setAddress("Coimbatore");
 
         when(userRepository.findByUsername("manu")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("secret")).thenReturn("encoded-secret");
+        when(customerClient.createCustomer(any())).thenReturn(new Object());
 
         String response = authService.register(request);
 
@@ -63,6 +79,9 @@ class AuthServiceTest {
         request.setPassword("secret");
         request.setRole("CUSTOMER");
         request.setName("Manu");
+        request.setEmail("manu@example.com");
+        request.setPhone("9876543210");
+        request.setAddress("Coimbatore");
 
         when(userRepository.findByUsername("manu")).thenReturn(Optional.of(new User()));
 
