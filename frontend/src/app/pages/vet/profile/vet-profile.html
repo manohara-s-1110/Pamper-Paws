@@ -1,0 +1,131 @@
+<section class="page-stack" *ngIf="vet() as currentVet">
+  <div class="page-hero compact">
+    <div>
+      <span class="eyebrow">Profile</span>
+      <h1>Refine your veterinary profile.</h1>
+      <p>
+        Keep specialization, clinic details, and contact information current so
+        the rest of the platform reflects your practice accurately.
+      </p>
+    </div>
+  </div>
+
+  <div class="content-grid two">
+    <article class="section-card accent">
+      <span class="eyebrow">At a glance</span>
+      <h2>{{ currentVet.name }}</h2>
+      <div class="info-stack">
+        <div>
+          <strong>Specialization</strong>
+          <span>{{ currentVet.specialization }}</span>
+        </div>
+        <div>
+          <strong>Experience</strong>
+          <span>{{ currentVet.experience }} years</span>
+        </div>
+        <div>
+          <strong>Email</strong>
+          <span>{{ currentVet.email }}</span>
+        </div>
+        <div>
+          <strong>Phone</strong>
+          <span>{{ currentVet.phone }}</span>
+        </div>
+        <div>
+          <strong>Availability</strong>
+          <span>{{ currentVet.availableDays }} · {{ currentVet.availableTime }}</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="section-card">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Edit</span>
+          <h2>Update profile</h2>
+        </div>
+      </div>
+
+      <form class="app-form" [formGroup]="form" (ngSubmit)="saveProfile()">
+        <div class="form-grid two">
+          <label class="field">
+            <span>Username</span>
+            <input type="text" formControlName="username" readonly />
+          </label>
+          <label class="field">
+            <span>Name</span>
+            <input type="text" formControlName="name" />
+          </label>
+          <label class="field">
+            <span>Email</span>
+            <input type="email" formControlName="email" />
+          </label>
+          <label class="field">
+            <span>Phone</span>
+            <input type="tel" formControlName="phone" />
+          </label>
+          <label class="field">
+            <span>Specialization</span>
+            <input type="text" formControlName="specialization" />
+          </label>
+          <label class="field">
+            <span>Experience</span>
+            <input type="number" min="0" formControlName="experience" />
+          </label>
+          <label class="field full">
+            <span>Clinic location</span>
+            <textarea formControlName="clinicAddress" rows="3"></textarea>
+          </label>
+        </div>
+
+        <div class="availability-summary">
+          <strong>Professional summary</strong>
+          <span>
+            {{ form.controls.specialization.value }} · {{ form.controls.experience.value }} years ·
+            {{ form.controls.clinicAddress.value }}
+          </span>
+        </div>
+
+        <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+        <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+        <button class="primary-button block" type="submit">
+          {{ saving() ? 'Saving...' : 'Save veterinarian profile' }}
+        </button>
+      </form>
+    </article>
+  </div>
+
+  <article class="section-card narrow">
+    <div class="section-header">
+      <div>
+        <span class="eyebrow">Security</span>
+        <h2>Change password</h2>
+      </div>
+    </div>
+
+    <form class="app-form" [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+      <div class="form-grid two">
+        <label class="field">
+          <span>Current password</span>
+          <input type="password" formControlName="currentPassword" />
+        </label>
+        <label class="field">
+          <span>New password</span>
+          <input type="password" formControlName="newPassword" />
+        </label>
+        <label class="field full">
+          <span>Confirm new password</span>
+          <input type="password" formControlName="confirmPassword" />
+        </label>
+      </div>
+
+      <p class="form-message success" *ngIf="passwordStatusMessage()">{{ passwordStatusMessage() }}</p>
+      <p class="form-message error" *ngIf="passwordErrorMessage()">{{ passwordErrorMessage() }}</p>
+
+      <button class="primary-button block" type="submit">
+        {{ changingPassword() ? 'Updating...' : 'Change password' }}
+      </button>
+    </form>
+  </article>
+</section>

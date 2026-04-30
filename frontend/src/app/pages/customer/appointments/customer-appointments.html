@@ -1,0 +1,226 @@
+<section class="page-stack">
+  <div class="page-hero compact">
+    <div>
+      <span class="eyebrow">Appointments</span>
+      <h1>Book and track care visits.</h1>
+      <p>
+        Choose a veterinarian, pick from live time slots, and review your visit
+        schedule in one place.
+      </p>
+    </div>
+  </div>
+
+  <div class="dashboard-grid four">
+    <article class="stat-card">
+      <span>Total bookings</span>
+      <strong>{{ appointments().length }}</strong>
+      <small>Every visit in your schedule</small>
+    </article>
+    <article class="stat-card accent">
+      <span>Today</span>
+      <strong>{{ todayCount() }}</strong>
+      <small>Visits scheduled for today</small>
+    </article>
+    <article class="stat-card">
+      <span>Upcoming</span>
+      <strong>{{ upcomingCount() }}</strong>
+      <small>Future bookings still ahead</small>
+    </article>
+    <article class="stat-card highlight">
+      <span>Next appointment</span>
+      <ng-container *ngIf="nextAppointment() as next; else noNextAppointment">
+        <strong>{{ petName(next.petId) }}</strong>
+        <small>{{ vetName(next.vetId) }} · {{ next.visitDate | date: 'MMM d' }} at {{ next.timeSlot }}</small>
+      </ng-container>
+      <ng-template #noNextAppointment>
+        <strong>You're all set!</strong>
+        <small>No future booking is waiting right now.</small>
+      </ng-template>
+    </article>
+  </div>
+
+  <div class="content-grid two">
+    <article class="section-card sticky-form">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">New booking</span>
+          <h2>Reserve a time slot</h2>
+        </div>
+      </div>
+
+      <form class="app-form" [formGroup]="form" (ngSubmit)="bookAppointment()">
+        <div class="field">
+          <span>Choose a pet</span>
+          <div class="pet-picker" *ngIf="pets().length; else noPetsForBooking">
+            <button
+              *ngFor="let pet of pets()"
+              class="pet-picker-card"
+              [class.selected]="selectedPet()?.id === pet.id"
+              type="button"
+              (click)="selectPet(pet)"
+            >
+              <div class="pet-media" *ngIf="pet.imageUrl; else petPickerFallback">
+                <img [src]="pet.imageUrl" [alt]="pet.name" />
+              </div>
+              <ng-template #petPickerFallback>
+                <div class="pet-media placeholder">{{ pet.name.charAt(0) }}</div>
+              </ng-template>
+              <div>
+                <strong>{{ pet.name }}</strong>
+                <span>{{ pet.type }} · {{ pet.age }} years</span>
+              </div>
+            </button>
+          </div>
+
+          <ng-template #noPetsForBooking>
+            <div class="empty-state compact">
+              <strong>No pets added yet 🐾</strong>
+              <span>Add a pet profile first so we can tie the booking to the right companion.</span>
+            </div>
+          </ng-template>
+        </div>
+
+        <label class="field">
+          <span>Veterinarian</span>
+          <select formControlName="vetId" (change)="loadSlots()">
+            <option value="">Select a veterinarian</option>
+            <option *ngFor="let vet of vetsList()" [value]="vet.id">
+              {{ vet.name }} · {{ vet.specialization }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Date</span>
+          <input type="date" formControlName="visitDate" [min]="todayDate()" (change)="loadSlots()" />
+        </label>
+
+        <label class="field">
+          <span>Available time slot</span>
+          <select formControlName="timeSlot">
+            <option value="">Select a slot</option>
+            <option *ngFor="let slot of timeSlots()" [value]="slot" [disabled]="isSlotUnavailable(slot)">
+              {{ slot }}{{ isSlotUnavailable(slot) ? ' - unavailable' : '' }}
+            </option>
+          </select>
+          <small class="field-help">{{ availableSlotsLabel() }}</small>
+        </label>
+
+        <label class="field">
+          <span>Reason for visit</span>
+          <textarea formControlName="reason" rows="4" placeholder="Describe the consultation, concern, or follow-up need"></textarea>
+        </label>
+
+        <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+        <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+        <button class="primary-button block" type="submit">
+          {{ saving() ? 'Booking...' : 'Book appointment' }}
+        </button>
+      </form>
+    </article>
+
+    <article class="section-card">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Schedule</span>
+          <h2>Your bookings</h2>
+        </div>
+        <span class="pill">{{ visibleAppointments().length }} shown</span>
+      </div>
+
+      <div class="filter-chip-row">
+        <button
+          *ngFor="let filter of filters"
+          class="filter-chip"
+          [class.active]="activeFilter() === filter.value"
+          type="button"
+          (click)="setFilter(filter.value)"
+        >
+          {{ filter.label }}
+        </button>
+      </div>
+
+      <div class="timeline-list appointment-list" *ngIf="visibleAppointments().length; else noBookings">
+        <article class="timeline-item interactive-card appointment-card" *ngFor="let visit of visibleAppointments()">
+          <div class="timeline-date">
+            <strong>{{ visit.visitDate | date: 'dd' }}</strong>
+            <span>{{ visit.visitDate | date: 'MMM' }}</span>
+          </div>
+          <div class="timeline-copy">
+            <div class="appointment-card-header">
+              <div>
+                <strong>{{ petName(visit.petId) }}</strong>
+                <span>{{ vetName(visit.vetId) }} · {{ visit.timeSlot }}</span>
+              </div>
+              <app-status-badge [status]="appointmentStatus(visit)"></app-status-badge>
+            </div>
+            <p>{{ visit.reason }}</p>
+            <div class="card-actions">
+              <button class="secondary-button small" type="button" (click)="openDetails(visit)">View Details</button>
+              <button class="ghost-button small danger" type="button" (click)="cancelAppointment(visit)">
+                {{ cancellingAppointmentId() === visit.id ? 'Cancelling...' : 'Cancel Appointment' }}
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #noBookings>
+        <div class="empty-state">
+          <strong>{{ emptyStateTitle() }}</strong>
+          <span>Your scheduled visits will show up here once you book one.</span>
+        </div>
+      </ng-template>
+    </article>
+  </div>
+
+  <app-modal
+    [open]="!!selectedAppointment()"
+    title="Appointment details"
+    eyebrow="Visit summary"
+    (close)="closeDetails()"
+  >
+    <div class="modal-stack" *ngIf="selectedAppointment() as visit">
+      <div class="detail-split">
+        <div class="pet-spotlight">
+          <div class="pet-media large" *ngIf="petImage(visit.petId); else modalPetFallback">
+            <img [src]="petImage(visit.petId)" [alt]="petName(visit.petId)" />
+          </div>
+          <ng-template #modalPetFallback>
+            <div class="pet-media large placeholder">{{ petName(visit.petId).charAt(0) }}</div>
+          </ng-template>
+          <div>
+            <strong>{{ petName(visit.petId) }}</strong>
+            <span>{{ petType(visit.petId) }}</span>
+          </div>
+        </div>
+
+        <div class="info-stack">
+          <div>
+            <strong>Veterinarian</strong>
+            <span>{{ vetName(visit.vetId) }}</span>
+          </div>
+          <div>
+            <strong>Date & time</strong>
+            <span>{{ visit.visitDate | date: 'fullDate' }} at {{ visit.timeSlot }}</span>
+          </div>
+          <div>
+            <strong>Status</strong>
+            <app-status-badge [status]="appointmentStatus(visit)"></app-status-badge>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-panel">
+        <strong>Reason for visit</strong>
+        <p>{{ visit.reason }}</p>
+        <div class="card-actions">
+          <button class="ghost-button small danger" type="button" (click)="cancelAppointment(visit)">
+            {{ cancellingAppointmentId() === visit.id ? 'Cancelling...' : 'Cancel Appointment' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </app-modal>
+</section>

@@ -1,0 +1,127 @@
+<section class="page-stack">
+  <div class="page-hero compact">
+    <div>
+      <span class="eyebrow">Pet management</span>
+      <h1>Pet profiles with image support.</h1>
+      <p>
+        Add, update, and organize each pet with a profile photo and essential
+        care details.
+      </p>
+    </div>
+  </div>
+
+  <div class="content-grid two">
+    <article class="section-card sticky-form">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">{{ currentPetId() ? 'Edit' : 'Add' }}</span>
+          <h2>{{ currentPetId() ? 'Update pet profile' : 'Create a new pet profile' }}</h2>
+        </div>
+        <button class="text-link button-reset" *ngIf="currentPetId()" type="button" (click)="cancelEdit()">
+          Cancel
+        </button>
+      </div>
+
+      <form class="app-form" [formGroup]="form" (ngSubmit)="savePet()">
+        <label class="field">
+          <span>Pet name</span>
+          <input type="text" formControlName="name" placeholder="Bella, Max, Bruno..." />
+        </label>
+        <label class="field">
+          <span>Breed or type</span>
+          <input type="text" formControlName="type" placeholder="Golden Retriever, Persian Cat..." />
+        </label>
+        <label class="field">
+          <span>Age</span>
+          <input type="number" min="0" formControlName="age" />
+        </label>
+        <label class="field">
+          <span>Pet photo</span>
+          <input type="file" accept="image/*" (change)="onFileSelected($event)" />
+        </label>
+
+        <div class="image-preview" *ngIf="previewUrl()">
+          <img [src]="previewUrl()" alt="Pet preview" />
+        </div>
+
+        <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+        <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+        <button class="primary-button block" type="submit">
+          {{ saving() ? 'Saving...' : currentPetId() ? 'Update pet' : 'Add pet' }}
+        </button>
+      </form>
+    </article>
+
+    <article class="section-card">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">Your list</span>
+          <h2>Saved pets</h2>
+        </div>
+        <span class="pill">{{ pets().length }} total</span>
+      </div>
+
+      <div class="pet-grid" *ngIf="pets().length; else noSavedPets">
+        <article class="pet-card-large interactive-card" *ngFor="let pet of pets()" (click)="openPetDetails(pet)">
+          <div class="pet-media large" *ngIf="pet.imageUrl; else petFallback">
+            <img [src]="pet.imageUrl" [alt]="pet.name" />
+          </div>
+          <ng-template #petFallback>
+            <div class="pet-media large placeholder">{{ pet.name.charAt(0) }}</div>
+          </ng-template>
+          <div class="pet-meta">
+            <strong>{{ pet.name }}</strong>
+            <span>{{ pet.type }}</span>
+            <small>{{ pet.age }} years old</small>
+          </div>
+          <div class="card-actions">
+            <button class="secondary-button small" type="button" (click)="editPet(pet); $event.stopPropagation()">Edit</button>
+            <button class="ghost-button small danger" type="button" (click)="deletePet(pet); $event.stopPropagation()">Delete</button>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #noSavedPets>
+        <div class="empty-state">
+          <strong>No pets added yet 🐾</strong>
+          <span>Create your first pet profile to start booking visits with the right context.</span>
+        </div>
+      </ng-template>
+    </article>
+  </div>
+
+  <app-modal
+    [open]="!!selectedPet()"
+    title="Pet profile"
+    eyebrow="Companion details"
+    [compact]="true"
+    (close)="closePetDetails()"
+  >
+    <div class="modal-stack" *ngIf="selectedPet() as pet">
+      <div class="pet-profile-modal">
+        <div class="pet-profile-image" *ngIf="pet.imageUrl; else modalPetPlaceholder">
+          <img [src]="pet.imageUrl" [alt]="pet.name" />
+        </div>
+        <ng-template #modalPetPlaceholder>
+          <div class="pet-profile-image placeholder">{{ pet.name.charAt(0) }}</div>
+        </ng-template>
+
+        <div class="info-stack">
+          <div>
+            <strong>Name</strong>
+            <span>{{ pet.name }}</span>
+          </div>
+          <div>
+            <strong>Breed or type</strong>
+            <span>{{ pet.type }}</span>
+          </div>
+          <div>
+            <strong>Age</strong>
+            <span>{{ pet.age }} years old</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </app-modal>
+</section>

@@ -1,0 +1,151 @@
+<ng-container *ngIf="vet() as currentVet; else vetDashboardFallback">
+  <section class="page-stack">
+    <div class="page-hero">
+      <div>
+        <span class="eyebrow">Veterinary workspace</span>
+        <h1>{{ currentVet.name }}</h1>
+        <p>
+          Stay on top of today's appointments, upcoming consults, and patient
+          communication from one focused workspace.
+        </p>
+      </div>
+    </div>
+
+    <div class="dashboard-grid four">
+      <article class="stat-card">
+        <span>Total appointments</span>
+        <strong>{{ appointments().length }}</strong>
+        <small>Visits assigned to your profile</small>
+      </article>
+      <article class="stat-card accent">
+        <span>Today</span>
+        <strong>{{ todaysAppointments().length }}</strong>
+        <small>Scheduled for {{ today | date: 'longDate' }}</small>
+      </article>
+      <article class="stat-card">
+        <span>Upcoming</span>
+        <strong>{{ upcomingAppointments().length }}</strong>
+        <small>Future visits after today</small>
+      </article>
+      <article class="stat-card highlight">
+        <span>Next appointment</span>
+        <ng-container *ngIf="nextAppointment() as next; else noNextVetVisit">
+          <strong>{{ customerName(next.customerId) }}</strong>
+          <small>{{ next.visitDate | date: 'MMM d' }} at {{ next.timeSlot }}</small>
+        </ng-container>
+        <ng-template #noNextVetVisit>
+          <strong>Schedule clear</strong>
+          <small>No future appointment is waiting right now.</small>
+        </ng-template>
+      </article>
+    </div>
+
+    <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+    <div class="content-grid two">
+      <article class="section-card">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">Leave</span>
+            <h2>Mark leave</h2>
+          </div>
+          <span class="pill">{{ leaveDates().length }} dates</span>
+        </div>
+
+        <form class="app-form" [formGroup]="leaveForm" (ngSubmit)="markLeave()">
+          <label class="field">
+            <span>Leave date</span>
+            <input type="date" formControlName="date" [min]="today" />
+            <small class="field-hint error" *ngIf="leaveForm.controls.date.touched && leaveForm.controls.date.invalid">
+              Leave date is required.
+            </small>
+          </label>
+
+          <p class="form-message success" *ngIf="leaveMessage()">{{ leaveMessage() }}</p>
+          <button class="primary-button block" type="submit">Mark Leave</button>
+        </form>
+
+        <div class="filter-chip-row" *ngIf="leaveDates().length">
+          <span class="filter-chip active" *ngFor="let date of leaveDates()">{{ date | date: 'MMM d, y' }}</span>
+        </div>
+      </article>
+
+      <article class="section-card">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">Today</span>
+            <h2>Today's bookings</h2>
+          </div>
+          <span class="pill">{{ todaysAppointments().length }} visits</span>
+        </div>
+
+        <div class="timeline-list scroll-panel" *ngIf="todaysAppointments().length; else noTodayAppointments">
+          <article class="timeline-item" *ngFor="let visit of todaysAppointments()">
+            <div class="timeline-date">
+              <strong>{{ visit.timeSlot }}</strong>
+              <span>Visit</span>
+            </div>
+            <div class="timeline-copy">
+              <strong>{{ customerName(visit.customerId) }}</strong>
+              <span>{{ customerPhone(visit.customerId) }}</span>
+              <p>{{ visit.reason }}</p>
+            </div>
+          </article>
+        </div>
+
+        <ng-template #noTodayAppointments>
+          <div class="empty-state compact">
+            <strong>No appointments today</strong>
+            <span>Your day is clear right now.</span>
+          </div>
+        </ng-template>
+      </article>
+
+      <article class="section-card accent">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">Upcoming</span>
+            <h2>Upcoming appointments</h2>
+          </div>
+          <span class="pill">{{ upcomingAppointments().length }} visits</span>
+        </div>
+
+        <div class="timeline-list scroll-panel" *ngIf="upcomingAppointments().length; else noUpcomingAppointments">
+          <article class="timeline-item" *ngFor="let visit of upcomingAppointments()">
+            <div class="timeline-date">
+              <strong>{{ visit.visitDate | date: 'dd' }}</strong>
+              <span>{{ visit.visitDate | date: 'MMM' }}</span>
+            </div>
+            <div class="timeline-copy">
+              <strong>{{ customerName(visit.customerId) }}</strong>
+              <span>{{ visit.timeSlot }}</span>
+              <p>{{ visit.reason }}</p>
+            </div>
+          </article>
+        </div>
+
+        <ng-template #noUpcomingAppointments>
+          <div class="empty-state compact">
+            <strong>No upcoming appointments</strong>
+            <span>Future bookings will appear here as customers schedule visits.</span>
+          </div>
+        </ng-template>
+      </article>
+    </div>
+  </section>
+</ng-container>
+
+<ng-template #vetDashboardFallback>
+  <section class="page-stack">
+    <div class="page-hero compact">
+      <div>
+        <span class="eyebrow">Veterinary workspace</span>
+        <h1>Dashboard unavailable</h1>
+        <p *ngIf="errorMessage(); else vetDashboardLoading">{{ errorMessage() }}</p>
+        <ng-template #vetDashboardLoading>
+          <p>Loading your veterinary dashboard.</p>
+        </ng-template>
+      </div>
+    </div>
+  </section>
+</ng-template>

@@ -1,0 +1,147 @@
+<section class="page-stack">
+  <div class="page-hero compact">
+    <div>
+      <span class="eyebrow">Appointments</span>
+      <h1>Full visit schedule</h1>
+      <p>Review the full list of visits attached to your veterinary profile.</p>
+    </div>
+  </div>
+
+  <article class="section-card">
+    <div class="section-header">
+      <div>
+        <span class="eyebrow">Schedule list</span>
+        <h2>Assigned appointments</h2>
+      </div>
+      <span class="pill">{{ visibleAppointments().length }} visits</span>
+    </div>
+
+    <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+    <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+    <div class="filter-chip-row">
+      <button
+        *ngFor="let filter of filters"
+        class="filter-chip"
+        [class.active]="activeFilter() === filter.value"
+        type="button"
+        (click)="setFilter(filter.value)"
+      >
+        {{ filter.label }}
+      </button>
+    </div>
+
+    <div class="timeline-list appointment-list" *ngIf="visibleAppointments().length; else noVetAppointments">
+      <article class="timeline-item interactive-card appointment-card" *ngFor="let visit of visibleAppointments()">
+        <div class="timeline-date">
+          <strong>{{ visit.visitDate | date: 'dd' }}</strong>
+          <span>{{ visit.visitDate | date: 'MMM' }}</span>
+        </div>
+        <div class="timeline-copy">
+          <div class="appointment-card-header">
+            <div>
+              <strong>{{ petName(visit.petId) }}</strong>
+              <span>{{ customerName(visit.customerId) }} · {{ visit.timeSlot }}</span>
+            </div>
+            <app-status-badge [status]="appointmentStatus(visit)"></app-status-badge>
+          </div>
+          <p>{{ visit.reason }}</p>
+          <div class="card-actions">
+            <button class="secondary-button small" type="button" (click)="openDetails(visit)">View Details</button>
+            <button class="ghost-button small" type="button" (click)="updateStatus(visit, 'COMPLETED')">
+              {{ updatingAppointmentId() === visit.id ? 'Updating...' : 'Mark Completed' }}
+            </button>
+            <button class="ghost-button small danger" type="button" (click)="updateStatus(visit, 'MISSED')">
+              Mark Missed
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <ng-template #noVetAppointments>
+      <div class="empty-state">
+        <strong>{{ emptyStateTitle() }}</strong>
+        <span>Assigned visits will appear here once customers begin booking against your profile.</span>
+      </div>
+    </ng-template>
+  </article>
+
+  <app-modal
+    [open]="!!selectedAppointment()"
+    title="Appointment details"
+    eyebrow="Patient overview"
+    (close)="closeDetails()"
+  >
+    <div class="modal-stack" *ngIf="selectedAppointment() as visit">
+      <div class="detail-split">
+        <div class="detail-panel soft">
+          <strong>{{ petName(visit.petId) }}</strong>
+          <span>{{ petDetails(visit.petId) }}</span>
+          <p>{{ customerName(visit.customerId) }}</p>
+        </div>
+
+        <div class="info-stack">
+          <div>
+            <strong>Date & time</strong>
+            <span>{{ visit.visitDate | date: 'fullDate' }} at {{ visit.timeSlot }}</span>
+          </div>
+          <div>
+            <strong>Appointment purpose</strong>
+            <span>{{ visit.reason }}</span>
+          </div>
+          <div>
+            <strong>Status</strong>
+            <app-status-badge [status]="appointmentStatus(visit)"></app-status-badge>
+          </div>
+          <div class="card-actions">
+            <button class="ghost-button small" type="button" (click)="updateStatus(visit, 'COMPLETED')">
+              Mark Completed
+            </button>
+            <button class="ghost-button small danger" type="button" (click)="updateStatus(visit, 'MISSED')">
+              Mark Missed
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-panel">
+        <div class="section-header tight">
+          <div>
+            <span class="eyebrow">History</span>
+            <h2>Patient history</h2>
+          </div>
+        </div>
+
+        <div class="empty-state compact" *ngIf="historyLoading()">
+          <strong>Loading history</strong>
+          <span>Pulling previous visits for this patient.</span>
+        </div>
+
+        <div class="empty-state compact" *ngIf="!historyLoading() && historyError()">
+          <strong>History unavailable</strong>
+          <span>{{ historyError() }}</span>
+        </div>
+
+        <div class="timeline-list" *ngIf="!historyLoading() && !historyError() && patientHistory().length">
+          <article class="timeline-item" *ngFor="let history of patientHistory()">
+            <div class="timeline-date">
+              <strong>{{ history.visitDate | date: 'dd' }}</strong>
+              <span>{{ history.visitDate | date: 'MMM' }}</span>
+            </div>
+            <div class="timeline-copy">
+              <strong>{{ history.reason }}</strong>
+              <span>{{ history.timeSlot }}</span>
+              <p *ngIf="history.notes">{{ history.notes }}</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="empty-state compact" *ngIf="!historyLoading() && !historyError() && !patientHistory().length">
+          <strong>No previous visits</strong>
+          <span>This looks like the patient’s first recorded appointment.</span>
+        </div>
+      </div>
+    </div>
+  </app-modal>
+</section>

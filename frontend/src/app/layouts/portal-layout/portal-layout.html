@@ -1,0 +1,53 @@
+<div class="portal-shell">
+  <header class="portal-header">
+    <a class="portal-brand" routerLink="/">
+      <span class="portal-brand-mark">PP</span>
+      <span>
+        <strong>Pamper Paws</strong>
+        <small>{{ portalTitle }}</small>
+      </span>
+    </a>
+
+    <button class="portal-menu-toggle" type="button" (click)="toggleMobileMenu()">
+      Menu
+    </button>
+
+    <div class="portal-user" *ngIf="session() as currentSession">
+      <div class="portal-user-copy">
+        <strong>{{ currentSession.username }}</strong>
+        <small>{{ currentSession.role | titlecase }}</small>
+      </div>
+      <div class="portal-avatar">{{ initials() }}</div>
+      <button class="ghost-button" type="button" (click)="logout()">Log out</button>
+    </div>
+  </header>
+
+  <div class="portal-body">
+    <aside class="portal-sidebar" [class.open]="mobileMenuOpen()">
+      <nav class="portal-nav">
+        <a
+          *ngFor="let item of navItems"
+          class="portal-nav-link"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+          [routerLink]="item.path"
+          (click)="closeMobileMenu()"
+        >
+          {{ item.label }}
+        </a>
+      </nav>
+    </aside>
+
+    <button
+      *ngIf="mobileMenuOpen()"
+      class="portal-backdrop"
+      type="button"
+      (click)="closeMobileMenu()"
+      aria-label="Close navigation"
+    ></button>
+
+    <main class="portal-main">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

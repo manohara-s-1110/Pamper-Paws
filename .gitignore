@@ -1,0 +1,39 @@
+/.metadata/
+
+# Mac
+.DS_Store
+
+# IDE files
+.classpath
+.factorypath
+.project
+.settings/
+.idea/
+*.iml
+.vscode/
+
+# Logs
+logs/
+*.log
+*.gz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Sonar
+.sonarlint/
+
+# Java build
+target/
+out/
+
+# Node
+node_modules/
+dist/
+.angular/
+coverage/
+
+# Local environment files
+.env
+**/.env
