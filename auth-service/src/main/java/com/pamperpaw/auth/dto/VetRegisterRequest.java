@@ -4,7 +4,10 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+
+import java.math.BigDecimal;
 
 @Data
 public class VetRegisterRequest {
@@ -13,6 +16,11 @@ public class VetRegisterRequest {
     private String username;
 
     @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    @Pattern(
+            regexp = "^(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
+            message = "Password must contain at least one uppercase letter, one number, and one special character"
+    )
     private String password;
 
     @NotBlank(message = "Name is required")
@@ -38,4 +46,7 @@ public class VetRegisterRequest {
 
     @NotBlank(message = "Available time is required")
     private String availableTime;
+
+    @Min(value = 1, message = "Consultation fee must be greater than zero")
+    private BigDecimal consultationFee;
 }

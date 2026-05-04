@@ -34,11 +34,17 @@
       <label class="field">
         <span>Username</span>
         <input type="text" formControlName="username" placeholder="Enter your username" />
+        <small class="field-hint error" *ngIf="form.controls.username.touched && form.controls.username.invalid">
+          Username is required.
+        </small>
       </label>
 
       <label class="field">
         <span>Password</span>
         <input type="password" formControlName="password" placeholder="Enter your password" />
+        <small class="field-hint error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+          Password is required.
+        </small>
       </label>
 
       <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>

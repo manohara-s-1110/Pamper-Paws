@@ -85,10 +85,15 @@
           <select formControlName="vetId" (change)="loadSlots()">
             <option value="">Select a veterinarian</option>
             <option *ngFor="let vet of vetsList()" [value]="vet.id">
-              {{ vet.name }} · {{ vet.specialization }}
+              {{ vet.name }} · {{ vet.specialization }} · ₹{{ vet.consultationFee || 500 }}
             </option>
           </select>
         </label>
+
+        <div class="detail-panel compact" *ngIf="selectedVet() as vet">
+          <strong>Consultation fee</strong>
+          <span>₹{{ selectedFee() }} payable for {{ vet.name }}</span>
+        </div>
 
         <label class="field">
           <span>Date</span>
@@ -99,7 +104,9 @@
           <span>Available time slot</span>
           <select formControlName="timeSlot">
             <option value="">Select a slot</option>
-            <option *ngFor="let slot of timeSlots()" [value]="slot">{{ slot }}</option>
+            <option *ngFor="let slot of timeSlots()" [value]="slot" [disabled]="unavailableSlots().includes(slot)">
+              {{ slot }}{{ unavailableSlots().includes(slot) ? ' - booked' : '' }}
+            </option>
           </select>
           <small class="field-help">{{ availableSlotsLabel() }}</small>
         </label>
@@ -107,6 +114,14 @@
         <label class="field">
           <span>Reason for visit</span>
           <textarea formControlName="reason" rows="4" placeholder="Describe the consultation, concern, or follow-up need"></textarea>
+        </label>
+
+        <label class="field">
+          <span>Payment method</span>
+          <select formControlName="paymentMethod">
+            <option value="ONLINE">Pay online now</option>
+            <option value="CASH">Pay cash at clinic</option>
+          </select>
         </label>
 
         <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
@@ -154,8 +169,17 @@
               <app-status-badge [status]="appointmentStatus(visit)"></app-status-badge>
             </div>
             <p>{{ visit.reason }}</p>
+            <small>Fee ₹{{ paymentAmountForVisit(visit) }} · {{ paymentLabel(visit) }}</small>
             <div class="card-actions">
               <button class="secondary-button small" type="button" (click)="openDetails(visit)">View Details</button>
+              <button
+                class="secondary-button small"
+                type="button"
+                *ngIf="shouldShowRetry(visit)"
+                (click)="retryPayment(visit)"
+              >
+                Retry Payment
+              </button>
               <button class="ghost-button small danger" type="button" (click)="cancelAppointment(visit)">
                 {{ cancellingAppointmentId() === visit.id ? 'Cancelling...' : 'Cancel Appointment' }}
               </button>
@@ -206,6 +230,10 @@
           <div>
             <strong>Status</strong>
             <app-status-badge [status]="appointmentStatus(visit)"></app-status-badge>
+          </div>
+          <div>
+            <strong>Payment</strong>
+            <span>₹{{ paymentAmountForVisit(visit) }} · {{ paymentLabel(visit) }}</span>
           </div>
         </div>
       </div>

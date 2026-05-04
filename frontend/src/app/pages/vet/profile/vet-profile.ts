@@ -33,6 +33,7 @@ export class VetProfileComponent {
     specialization: ['', Validators.required],
     experience: [0, [Validators.required, Validators.min(0)]],
     clinicAddress: ['', Validators.required],
+    consultationFee: [500, [Validators.required, Validators.min(1)]],
   });
 
   readonly passwordForm = this.fb.nonNullable.group({
@@ -67,6 +68,7 @@ export class VetProfileComponent {
         clinicAddress: this.form.controls.clinicAddress.value,
         availableDays: vet.availableDays,
         availableTime: vet.availableTime,
+        consultationFee: this.form.controls.consultationFee.value,
       })
       .subscribe({
         next: (updatedVet) => {
@@ -137,6 +139,7 @@ export class VetProfileComponent {
           specialization: vet.specialization,
           experience: vet.experience,
           clinicAddress: vet.clinicAddress,
+          consultationFee: vet.consultationFee ?? 500,
         });
       },
       error: () => {

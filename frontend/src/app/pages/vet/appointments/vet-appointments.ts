@@ -32,6 +32,8 @@ export class VetAppointmentsComponent {
   readonly historyLoading = signal(false);
   readonly historyError = signal('');
   readonly activeFilter = signal<AppointmentFilter>('today');
+  readonly statusMessage = signal('');
+  readonly errorMessage = signal('');
 
   readonly filters: { label: string; value: AppointmentFilter }[] = [
     { label: 'Today', value: 'today' },
@@ -112,6 +114,24 @@ export class VetAppointmentsComponent {
     this.patientHistory.set([]);
     this.historyLoading.set(false);
     this.historyError.set('');
+  }
+
+  updateStatus(visit: Visit, status: 'COMPLETED' | 'MISSED') {
+    this.statusMessage.set('');
+    this.errorMessage.set('');
+
+    this.visits.updateVisitStatus(visit.id, status).subscribe({
+      next: (updatedVisit) => {
+        this.appointments.update((appointments) =>
+          appointments.map((appointment) => appointment.id === updatedVisit.id ? updatedVisit : appointment),
+        );
+        this.selectedAppointment.update((selected) => selected?.id === updatedVisit.id ? updatedVisit : selected);
+        this.statusMessage.set(status === 'COMPLETED' ? 'Appointment marked completed.' : 'Appointment marked missed.');
+      },
+      error: () => {
+        this.errorMessage.set('Unable to update appointment status right now.');
+      },
+    });
   }
 
   emptyStateTitle() {

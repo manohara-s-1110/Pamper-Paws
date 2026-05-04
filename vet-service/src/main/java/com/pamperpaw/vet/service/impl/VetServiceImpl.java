@@ -1,8 +1,12 @@
 package com.pamperpaw.vet.service.impl;
 
 import com.pamperpaw.vet.dto.VetDTO;
+import com.pamperpaw.vet.dto.VetFeeResponse;
+import com.pamperpaw.vet.dto.VetLeaveResponse;
 import com.pamperpaw.vet.entity.Vet;
+import com.pamperpaw.vet.entity.VetLeave;
 import com.pamperpaw.vet.exception.VetNotFoundException;
+import com.pamperpaw.vet.repository.VetLeaveRepository;
 import com.pamperpaw.vet.repository.VetRepository;
 import com.pamperpaw.vet.service.VetService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.math.BigDecimal;
 
 @Slf4j
 @Service
@@ -22,6 +27,8 @@ import java.util.concurrent.CompletableFuture;
 public class VetServiceImpl implements VetService {
 
     private final VetRepository vetRepository;
+    private final VetLeaveRepository vetLeaveRepository;
+    private static final BigDecimal DEFAULT_CONSULTATION_FEE = BigDecimal.valueOf(500);
 
     private VetDTO mapToDTO(Vet vet) {
         return VetDTO.builder()
@@ -35,6 +42,7 @@ public class VetServiceImpl implements VetService {
                 .clinicAddress(vet.getClinicAddress())
                 .availableDays(vet.getAvailableDays())
                 .availableTime(vet.getAvailableTime())
+                .consultationFee(resolveFee(vet.getConsultationFee()))
                 .build();
     }
 
@@ -50,6 +58,7 @@ public class VetServiceImpl implements VetService {
                 .clinicAddress(dto.getClinicAddress())
                 .availableDays(dto.getAvailableDays())
                 .availableTime(dto.getAvailableTime())
+                .consultationFee(resolveFee(dto.getConsultationFee()))
                 .build();
     }
 
@@ -77,6 +86,7 @@ public class VetServiceImpl implements VetService {
         vet.setClinicAddress(dto.getClinicAddress().trim());
         vet.setAvailableDays(dto.getAvailableDays().trim());
         vet.setAvailableTime(dto.getAvailableTime().trim());
+        vet.setConsultationFee(resolveFee(dto.getConsultationFee()));
 
         log.info("Creating vet {}", vet.getName());
         return mapToDTO(vetRepository.save(vet));
@@ -131,6 +141,7 @@ public class VetServiceImpl implements VetService {
         vet.setClinicAddress(dto.getClinicAddress().trim());
         vet.setAvailableDays(dto.getAvailableDays().trim());
         vet.setAvailableTime(dto.getAvailableTime().trim());
+        vet.setConsultationFee(resolveFee(dto.getConsultationFee()));
 
         log.info("Updating vet with id={}", id);
         return mapToDTO(vetRepository.save(vet));
@@ -206,6 +217,10 @@ public class VetServiceImpl implements VetService {
         Vet vet = vetRepository.findById(vetId)
                 .orElseThrow(() -> new RuntimeException("Vet not found"));
 
+        if (vetLeaveRepository.existsByVetIdAndLeaveDate(vetId, date)) {
+            return List.of();
+        }
+
         String time = vet.getAvailableTime();
 
         String[] parts = time.split("-");
@@ -221,5 +236,60 @@ public class VetServiceImpl implements VetService {
         }
 
         return allSlots;
+    }
+
+    @Override
+    public VetFeeResponse getConsultationFee(Long vetId) {
+        Vet vet = vetRepository.findById(vetId)
+                .orElseThrow(() -> new VetNotFoundException("Vet not found with id " + vetId));
+        return new VetFeeResponse(vet.getId(), resolveFee(vet.getConsultationFee()));
+    }
+
+    @Override
+    public VetLeaveResponse addLeave(Long vetId, String date) {
+        vetRepository.findById(vetId)
+                .orElseThrow(() -> new VetNotFoundException("Vet not found with id " + vetId));
+
+        VetLeave leave = vetLeaveRepository.findByVetIdAndLeaveDate(vetId, date)
+                .orElseGet(() -> vetLeaveRepository.save(VetLeave.builder()
+                        .vetId(vetId)
+                        .leaveDate(date)
+                        .build()));
+
+        return mapToLeaveResponse(leave);
+    }
+
+    @Override
+    public List<VetLeaveResponse> getLeaves(Long vetId) {
+        vetRepository.findById(vetId)
+                .orElseThrow(() -> new VetNotFoundException("Vet not found with id " + vetId));
+
+        return vetLeaveRepository.findByVetIdOrderByLeaveDateAsc(vetId)
+                .stream()
+                .map(this::mapToLeaveResponse)
+                .toList();
+    }
+
+    @Override
+    public List<String> getLeaveDates(Long vetId) {
+        return getLeaves(vetId)
+                .stream()
+                .map(VetLeaveResponse::getDate)
+                .toList();
+    }
+
+    private BigDecimal resolveFee(BigDecimal consultationFee) {
+        if (consultationFee == null || consultationFee.compareTo(BigDecimal.ZERO) <= 0) {
+            return DEFAULT_CONSULTATION_FEE;
+        }
+        return consultationFee;
+    }
+
+    private VetLeaveResponse mapToLeaveResponse(VetLeave leave) {
+        return VetLeaveResponse.builder()
+                .id(leave.getId())
+                .vetId(leave.getVetId())
+                .date(leave.getLeaveDate())
+                .build();
     }
 }

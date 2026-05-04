@@ -21,11 +21,19 @@ export class VisitDataService {
     return this.http.get<Visit[]>(`${this.baseUrl}/vet/${vetId}`);
   }
 
+  getUnavailableSlots(vetId: number, date: string) {
+    return this.http.get<string[]>(`${this.baseUrl}/vet/${vetId}/unavailable-slots?date=${date}`);
+  }
+
   getVisitsByPet(petId: number) {
     return this.http.get<Visit[]>(`${this.baseUrl}/pet/${petId}`);
   }
 
   deleteVisit(id: number) {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  updateVisitStatus(id: number, status: 'COMPLETED' | 'MISSED') {
+    return this.http.patch<Visit>(`${this.baseUrl}/${id}/status`, { status });
   }
 }

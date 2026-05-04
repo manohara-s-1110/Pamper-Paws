@@ -3,6 +3,7 @@ package com.pamperpaw.auth.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Entity
@@ -20,6 +21,7 @@ public class User {
 
     @Column(nullable = false)
     @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
     @Column(nullable = false)

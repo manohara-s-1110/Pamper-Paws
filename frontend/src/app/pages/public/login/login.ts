@@ -26,6 +26,9 @@ export class PublicLoginComponent {
 
   login() {
     if (this.form.invalid || this.submitting()) {
+      if (!this.submitting()) {
+        this.errorMessage.set('Please fill all required fields');
+      }
       this.form.markAllAsTouched();
       return;
     }

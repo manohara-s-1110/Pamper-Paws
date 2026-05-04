@@ -28,6 +28,9 @@
       </button>
     </div>
 
+    <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
+    <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
     <div class="timeline-list appointment-list" *ngIf="visibleAppointments().length; else noVetAppointments">
       <article class="timeline-item interactive-card appointment-card" *ngFor="let visit of visibleAppointments()">
         <div class="timeline-date">
@@ -45,6 +48,12 @@
           <p>{{ visit.reason }}</p>
           <div class="card-actions">
             <button class="secondary-button small" type="button" (click)="openDetails(visit)">View Details</button>
+            <button class="secondary-button small" type="button" (click)="updateStatus(visit, 'COMPLETED')">
+              Mark Completed
+            </button>
+            <button class="ghost-button small danger" type="button" (click)="updateStatus(visit, 'MISSED')">
+              Mark Missed
+            </button>
           </div>
         </div>
       </article>
@@ -86,6 +95,15 @@
             <app-status-badge [status]="appointmentStatus(visit)"></app-status-badge>
           </div>
         </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="secondary-button small" type="button" (click)="updateStatus(visit, 'COMPLETED')">
+          Mark Completed
+        </button>
+        <button class="ghost-button small danger" type="button" (click)="updateStatus(visit, 'MISSED')">
+          Mark Missed
+        </button>
       </div>
 
       <div class="detail-panel">

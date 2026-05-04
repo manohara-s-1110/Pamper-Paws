@@ -3,6 +3,7 @@ package com.pamperpaw.visit.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import com.pamperpaw.visit.entity.PaymentMethod;
 
 @Data
 public class VisitRequestDTO {
@@ -24,4 +25,7 @@ public class VisitRequestDTO {
     
     @NotBlank(message = "Time slot is required")
     private String timeSlot;
+
+    @NotNull(message = "Payment method is required")
+    private PaymentMethod paymentMethod = PaymentMethod.ONLINE;
 }

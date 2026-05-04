@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 
-import { AppointmentStatus } from '../../../utils/appointment-ui';
+import { AppointmentDisplayStatus } from '../../../utils/appointment-ui';
 
 @Component({
   selector: 'app-status-badge',
@@ -12,11 +12,12 @@ import { AppointmentStatus } from '../../../utils/appointment-ui';
   `,
 })
 export class StatusBadgeComponent {
-  readonly status = input.required<AppointmentStatus>();
+  readonly status = input.required<AppointmentDisplayStatus>();
 
   readonly tone = computed(() => {
     switch (this.status()) {
       case 'Completed':
+      case 'Missed':
         return 'completed';
       case 'Today':
         return 'today';

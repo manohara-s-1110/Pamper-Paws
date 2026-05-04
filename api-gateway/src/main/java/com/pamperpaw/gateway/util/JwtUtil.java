@@ -32,6 +32,15 @@ public class JwtUtil {
                 .get("role");
     }
 
+    public String extractUsername(String token) {
+        return Jwts.parser()
+                .verifyWith(getKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser()

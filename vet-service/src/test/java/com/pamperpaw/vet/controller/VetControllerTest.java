@@ -2,6 +2,7 @@ package com.pamperpaw.vet.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pamperpaw.vet.dto.VetDTO;
+import com.pamperpaw.vet.dto.VetFeeResponse;
 import com.pamperpaw.vet.exception.GlobalExceptionHandler;
 import com.pamperpaw.vet.exception.VetNotFoundException;
 import com.pamperpaw.vet.service.VetService;
@@ -17,6 +18,7 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.verify;
@@ -83,6 +85,7 @@ class VetControllerTest {
         when(vetService.getVetsBySpecialization("Surgery")).thenReturn(List.of(dto));
         when(vetService.getVetsByLocation("Chennai")).thenReturn(List.of(dto));
         when(vetService.getVetsByExperience(5)).thenReturn(List.of(dto));
+        when(vetService.getConsultationFee(1L)).thenReturn(new VetFeeResponse(1L, BigDecimal.valueOf(500)));
 
         mockMvc.perform(get("/vets"))
                 .andExpect(status().isOk())
@@ -103,6 +106,10 @@ class VetControllerTest {
         mockMvc.perform(get("/vets/experience").param("experience", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].experience").value(5));
+
+        mockMvc.perform(get("/vets/1/fee"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.consultationFee").value(500));
     }
 
     @Test
@@ -143,6 +150,7 @@ class VetControllerTest {
     private VetDTO buildVet() {
         return VetDTO.builder()
                 .id(1L)
+                .username("drrex")
                 .name("Dr Rex")
                 .specialization("Surgery")
                 .experience(5)
@@ -151,6 +159,7 @@ class VetControllerTest {
                 .clinicAddress("City Clinic")
                 .availableDays("Mon-Fri")
                 .availableTime("10AM-6PM")
+                .consultationFee(BigDecimal.valueOf(500))
                 .build();
     }
 }

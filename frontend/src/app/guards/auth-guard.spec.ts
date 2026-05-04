@@ -1,17 +1,45 @@
 import { TestBed } from '@angular/core/testing';
-import { CanActivateFn } from '@angular/router';
-
+import { Router } from '@angular/router';
 import { authGuard } from './auth-guard';
 
 describe('authGuard', () => {
-  const executeGuard: CanActivateFn = (...guardParameters) =>
-    TestBed.runInInjectionContext(() => authGuard(...guardParameters));
+
+  let routerMock: any;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    routerMock = {
+      navigate: vi.fn()
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Router, useValue: routerMock }
+      ]
+    });
+
+    sessionStorage.clear(); // ensure clean state before each test
   });
 
-  it('should be created', () => {
-    expect(executeGuard).toBeTruthy();
+  it('should allow access when token exists', () => {
+
+    sessionStorage.setItem('token', 'dummy-token');
+
+    const result = TestBed.runInInjectionContext(() =>
+      authGuard({} as any, {} as any)
+    );
+
+    expect(result).toBeTruthy();
+    expect(routerMock.navigate).not.toHaveBeenCalled();
   });
+
+  it('should redirect to login when token does not exist', () => {
+
+    const result = TestBed.runInInjectionContext(() =>
+      authGuard({} as any, {} as any)
+    );
+
+    expect(result).toBeFalsy();
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
 });

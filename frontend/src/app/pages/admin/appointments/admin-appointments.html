@@ -24,6 +24,8 @@
             <th>Time</th>
             <th>Customer</th>
             <th>Vet</th>
+            <th>Status</th>
+            <th>Payment</th>
             <th>Reason</th>
             <th></th>
           </tr>
@@ -34,6 +36,8 @@
             <td>{{ visit.timeSlot }}</td>
             <td>{{ customerName(visit.customerId) }}</td>
             <td>{{ vetName(visit.vetId) }}</td>
+            <td>{{ visit.status || 'PENDING' }}</td>
+            <td>{{ visit.paymentMethod || 'ONLINE' }} · {{ visit.paymentStatus || 'PENDING' }}</td>
             <td>{{ visit.reason }}</td>
             <td>
               <button class="ghost-button small danger" type="button" (click)="deleteVisit(visit.id)">

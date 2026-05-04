@@ -2,6 +2,8 @@ package com.pamperpaw.visit.controller;
 
 import com.pamperpaw.visit.dto.VisitRequestDTO;
 import com.pamperpaw.visit.dto.VisitResponseDTO;
+import com.pamperpaw.visit.dto.UpdateVisitPaymentStatusRequest;
+import com.pamperpaw.visit.dto.UpdateVisitStatusRequest;
 import com.pamperpaw.visit.service.VisitService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,18 @@ public class VisitController {
         service.deleteVisit(id);
     }
 
+    @PatchMapping("/{id}/payment-status")
+    public VisitResponseDTO updateVisitPaymentStatus(@PathVariable Long id,
+                                                     @Valid @RequestBody UpdateVisitPaymentStatusRequest request) {
+        return service.updateVisitPaymentStatus(id, request.getPaymentStatus());
+    }
+
+    @PatchMapping("/{id}/status")
+    public VisitResponseDTO updateVisitStatus(@PathVariable Long id,
+                                              @Valid @RequestBody UpdateVisitStatusRequest request) {
+        return service.updateVisitStatus(id, request.getStatus());
+    }
+
     // 🔥 ADD THIS (for dashboard appointments)
     @GetMapping("/customer/{customerId}")
     public List<VisitResponseDTO> getVisitsByCustomer(@PathVariable Long customerId) {
@@ -63,5 +77,11 @@ public class VisitController {
             @RequestParam String date) {
 
         return service.getVisitsByVetAndDate(vetId, date);
+    }
+
+    @GetMapping("/vet/{vetId}/unavailable-slots")
+    public List<String> getUnavailableSlots(@PathVariable Long vetId,
+                                            @RequestParam String date) {
+        return service.getUnavailableSlots(vetId, date);
     }
 }

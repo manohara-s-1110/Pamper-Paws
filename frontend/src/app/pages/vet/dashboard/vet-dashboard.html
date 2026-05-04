@@ -40,9 +40,43 @@
       </article>
     </div>
 
+    <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
     <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
 
     <div class="content-grid two">
+      <article class="section-card">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">Leave</span>
+            <h2>Mark leave</h2>
+          </div>
+          <span class="pill">{{ leaves().length }} dates</span>
+        </div>
+
+        <form class="app-form" [formGroup]="leaveForm" (ngSubmit)="markLeave()">
+          <label class="field">
+            <span>Leave date</span>
+            <input type="date" formControlName="date" />
+          </label>
+          <button class="secondary-button" type="submit">
+            {{ leaveSaving() ? 'Saving...' : 'Mark Leave' }}
+          </button>
+        </form>
+
+        <div class="timeline-list scroll-panel" *ngIf="leaves().length">
+          <article class="timeline-item" *ngFor="let leave of leaves()">
+            <div class="timeline-date">
+              <strong>{{ leave.date | date: 'dd' }}</strong>
+              <span>{{ leave.date | date: 'MMM' }}</span>
+            </div>
+            <div class="timeline-copy">
+              <strong>On leave</strong>
+              <span>No customer slots will be offered.</span>
+            </div>
+          </article>
+        </div>
+      </article>
+
       <article class="section-card">
         <div class="section-header">
           <div>

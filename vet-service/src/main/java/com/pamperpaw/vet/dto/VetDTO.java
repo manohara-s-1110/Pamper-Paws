@@ -3,6 +3,8 @@ package com.pamperpaw.vet.dto;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -36,4 +38,7 @@ public class VetDTO {
 
     @NotBlank(message = "Available time is required")
     private String availableTime;
+
+    @DecimalMin(value = "0.0", inclusive = false, message = "Consultation fee must be greater than zero")
+    private BigDecimal consultationFee;
 }

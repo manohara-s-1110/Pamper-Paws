@@ -1,17 +1,44 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpInterceptorFn } from '@angular/common/http';
-
+import { HttpRequest, HttpHandlerFn } from '@angular/common/http';
 import { authInterceptor } from './auth-interceptor';
 
 describe('authInterceptor', () => {
-  const interceptor: HttpInterceptorFn = (req, next) =>
-    TestBed.runInInjectionContext(() => authInterceptor(req, next));
+
+  let next: any;
 
   beforeEach(() => {
+    next = vi.fn((req: HttpRequest<any>) => req);
+
     TestBed.configureTestingModule({});
+    sessionStorage.clear();
   });
 
-  it('should be created', () => {
-    expect(interceptor).toBeTruthy();
+  it('should add Authorization header when token exists', () => {
+
+    sessionStorage.setItem('token', 'dummy-token');
+
+    const request = new HttpRequest('GET', '/test');
+
+    TestBed.runInInjectionContext(() => {
+      authInterceptor(request, next);
+    });
+
+    const modifiedRequest = next.mock.calls[0][0];
+
+    expect(modifiedRequest.headers.get('Authorization')).toBe('Bearer dummy-token');
   });
+
+  it('should not add Authorization header when token does not exist', () => {
+
+    const request = new HttpRequest('GET', '/test');
+
+    TestBed.runInInjectionContext(() => {
+      authInterceptor(request, next);
+    });
+
+    const modifiedRequest = next.mock.calls[0][0];
+
+    expect(modifiedRequest.headers.has('Authorization')).toBeFalsy();
+  });
+
 });

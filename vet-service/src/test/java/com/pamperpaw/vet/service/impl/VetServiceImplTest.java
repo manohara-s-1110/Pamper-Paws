@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,6 +34,7 @@ class VetServiceImplTest {
     void createVetPersistsAndMapsResponse() {
         VetDTO dto = VetDTO.builder()
                 .name("Dr Paws")
+                .username("drpaws")
                 .specialization("Surgery")
                 .experience(5)
                 .phone("9876543210")
@@ -40,11 +42,13 @@ class VetServiceImplTest {
                 .clinicAddress("Chennai")
                 .availableDays("Mon")
                 .availableTime("10AM")
+                .consultationFee(BigDecimal.valueOf(600))
                 .build();
 
         Vet savedVet = Vet.builder()
                 .id(1L)
                 .name(dto.getName())
+                .username(dto.getUsername())
                 .specialization(dto.getSpecialization())
                 .experience(dto.getExperience())
                 .phone(dto.getPhone())
@@ -52,6 +56,7 @@ class VetServiceImplTest {
                 .clinicAddress(dto.getClinicAddress())
                 .availableDays(dto.getAvailableDays())
                 .availableTime(dto.getAvailableTime())
+                .consultationFee(dto.getConsultationFee())
                 .build();
 
         when(vetRepository.save(any(Vet.class))).thenReturn(savedVet);
@@ -60,6 +65,7 @@ class VetServiceImplTest {
 
         assertEquals(1L, response.getId());
         assertEquals("Dr Paws", response.getName());
+        assertEquals(BigDecimal.valueOf(600), response.getConsultationFee());
     }
 
     @Test
@@ -74,6 +80,7 @@ class VetServiceImplTest {
         Vet vet = Vet.builder()
                 .id(1L)
                 .name("Dr Paws")
+                .username("drpaws")
                 .specialization("Surgery")
                 .experience(5)
                 .phone("9876543210")
@@ -81,6 +88,7 @@ class VetServiceImplTest {
                 .clinicAddress("Chennai")
                 .availableDays("Mon")
                 .availableTime("10AM")
+                .consultationFee(BigDecimal.valueOf(500))
                 .build();
 
         when(vetRepository.findAll()).thenReturn(List.of(vet));
@@ -96,6 +104,7 @@ class VetServiceImplTest {
         Vet vet = Vet.builder()
                 .id(1L)
                 .name("Dr Paws")
+                .username("drpaws")
                 .specialization("Surgery")
                 .experience(5)
                 .phone("9876543210")
@@ -103,6 +112,7 @@ class VetServiceImplTest {
                 .clinicAddress("Chennai")
                 .availableDays("Mon")
                 .availableTime("10AM")
+                .consultationFee(BigDecimal.valueOf(500))
                 .build();
 
         when(vetRepository.findById(1L)).thenReturn(Optional.of(vet));
@@ -115,9 +125,10 @@ class VetServiceImplTest {
 
     @Test
     void updateVetUpdatesExistingVet() {
-        Vet existing = Vet.builder().id(1L).build();
+        Vet existing = Vet.builder().id(1L).username("drpaws").build();
         Vet saved = Vet.builder()
                 .id(1L)
+                .username("drpaws")
                 .name("Updated")
                 .specialization("Dermatology")
                 .experience(8)
@@ -126,10 +137,12 @@ class VetServiceImplTest {
                 .clinicAddress("Madurai")
                 .availableDays("Tue")
                 .availableTime("11AM")
+                .consultationFee(BigDecimal.valueOf(700))
                 .build();
 
         VetDTO dto = VetDTO.builder()
                 .name("Updated")
+                .username("drpaws")
                 .specialization("Dermatology")
                 .experience(8)
                 .phone("9999999999")
@@ -137,6 +150,7 @@ class VetServiceImplTest {
                 .clinicAddress("Madurai")
                 .availableDays("Tue")
                 .availableTime("11AM")
+                .consultationFee(BigDecimal.valueOf(700))
                 .build();
 
         when(vetRepository.findById(1L)).thenReturn(Optional.of(existing));
@@ -146,6 +160,7 @@ class VetServiceImplTest {
 
         assertEquals("Updated", response.getName());
         assertEquals("Dermatology", response.getSpecialization());
+        assertEquals(BigDecimal.valueOf(700), response.getConsultationFee());
     }
 
     @Test
@@ -176,9 +191,11 @@ class VetServiceImplTest {
         Vet vet = Vet.builder()
                 .id(1L)
                 .name("Dr Paws")
+                .username("drpaws")
                 .specialization("Surgery")
                 .experience(5)
                 .clinicAddress("Chennai")
+                .consultationFee(BigDecimal.valueOf(500))
                 .build();
 
         when(vetRepository.findBySpecialization("Surgery")).thenReturn(List.of(vet));
@@ -188,5 +205,17 @@ class VetServiceImplTest {
         assertEquals(1, vetService.getVetsBySpecialization("Surgery").size());
         assertEquals(1, vetService.getVetsByLocation("Chennai").size());
         assertEquals(1, vetService.getVetsByExperience(5).size());
+    }
+
+    @Test
+    void getConsultationFeeReturnsFee() {
+        Vet vet = Vet.builder()
+                .id(1L)
+                .consultationFee(BigDecimal.valueOf(800))
+                .build();
+
+        when(vetRepository.findById(1L)).thenReturn(Optional.of(vet));
+
+        assertEquals(BigDecimal.valueOf(800), vetService.getConsultationFee(1L).getConsultationFee());
     }
 }

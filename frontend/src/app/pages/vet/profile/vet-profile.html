@@ -35,6 +35,10 @@
           <strong>Availability</strong>
           <span>{{ currentVet.availableDays }} · {{ currentVet.availableTime }}</span>
         </div>
+        <div>
+          <strong>Consultation fee</strong>
+          <span>₹{{ currentVet.consultationFee || 500 }}</span>
+        </div>
       </div>
     </article>
 
@@ -72,6 +76,10 @@
             <span>Experience</span>
             <input type="number" min="0" formControlName="experience" />
           </label>
+          <label class="field">
+            <span>Consultation fee</span>
+            <input type="number" min="1" formControlName="consultationFee" />
+          </label>
           <label class="field full">
             <span>Clinic location</span>
             <textarea formControlName="clinicAddress" rows="3"></textarea>
@@ -82,7 +90,7 @@
           <strong>Professional summary</strong>
           <span>
             {{ form.controls.specialization.value }} · {{ form.controls.experience.value }} years ·
-            {{ form.controls.clinicAddress.value }}
+            ₹{{ form.controls.consultationFee.value }} fee · {{ form.controls.clinicAddress.value }}
           </span>
         </div>
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
-import { Vet, VetPayload } from '../models/app.models';
+import { Vet, VetLeave, VetPayload } from '../models/app.models';
 
 @Injectable({ providedIn: 'root' })
 export class VetDataService {
@@ -31,5 +31,13 @@ export class VetDataService {
 
   getSlots(vetId: number, date: string) {
     return this.http.get<string[]>(`${this.baseUrl}/vets/${vetId}/slots?date=${date}`);
+  }
+
+  addLeave(vetId: number, date: string) {
+    return this.http.post<VetLeave>(`${this.baseUrl}/vets/${vetId}/leaves`, { date });
+  }
+
+  getLeaves(vetId: number) {
+    return this.http.get<VetLeave[]>(`${this.baseUrl}/vets/${vetId}/leave-records`);
   }
 }

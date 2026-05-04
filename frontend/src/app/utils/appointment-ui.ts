@@ -1,6 +1,7 @@
 import { Visit } from '../models/app.models';
 
 export type AppointmentStatus = 'Completed' | 'Today' | 'Upcoming';
+export type AppointmentDisplayStatus = AppointmentStatus | 'Missed';
 export type AppointmentFilter = 'all' | 'today' | 'upcoming' | 'past';
 
 export function appointmentDateTimeValue(visit: Pick<Visit, 'visitDate' | 'timeSlot'>): number {
@@ -8,9 +9,17 @@ export function appointmentDateTimeValue(visit: Pick<Visit, 'visitDate' | 'timeS
 }
 
 export function getAppointmentStatus(
-  visit: Pick<Visit, 'visitDate' | 'timeSlot'>,
+  visit: Pick<Visit, 'visitDate' | 'timeSlot' | 'status'>,
   referenceDate = new Date(),
-): AppointmentStatus {
+): AppointmentDisplayStatus {
+  if (visit.status === 'COMPLETED') {
+    return 'Completed';
+  }
+
+  if (visit.status === 'MISSED') {
+    return 'Missed';
+  }
+
   const visitDate = new Date(`${visit.visitDate}T00:00:00`);
   const today = new Date(referenceDate);
   today.setHours(0, 0, 0, 0);
@@ -26,7 +35,7 @@ export function getAppointmentStatus(
   return 'Upcoming';
 }
 
-export function isVisitInFilter(visit: Pick<Visit, 'visitDate' | 'timeSlot'>, filter: AppointmentFilter) {
+export function isVisitInFilter(visit: Pick<Visit, 'visitDate' | 'timeSlot' | 'status'>, filter: AppointmentFilter) {
   const status = getAppointmentStatus(visit);
 
   switch (filter) {
@@ -35,7 +44,7 @@ export function isVisitInFilter(visit: Pick<Visit, 'visitDate' | 'timeSlot'>, fi
     case 'upcoming':
       return status === 'Upcoming';
     case 'past':
-      return status === 'Completed';
+      return status === 'Completed' || status === 'Missed';
     default:
       return true;
   }
