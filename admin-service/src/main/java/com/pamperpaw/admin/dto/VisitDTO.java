@@ -16,4 +16,7 @@ public class VisitDTO {
     private String reason;
     private String timeSlot;
     private String status;
+    private String paymentMethod;
+    private String paymentStatus;
+    private java.math.BigDecimal consultationFee;
 }

@@ -26,7 +26,7 @@ public class InternalServiceFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        if (HttpMethod.OPTIONS.matches(request.getMethod()) || isHealthCheck(request)) {
+        if (HttpMethod.OPTIONS.matches(request.getMethod()) || isPublicInfrastructureRequest(request)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -40,7 +40,12 @@ public class InternalServiceFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean isHealthCheck(HttpServletRequest request) {
-        return "/actuator/health".equals(request.getRequestURI());
+    private boolean isPublicInfrastructureRequest(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return "/actuator/health".equals(path)
+                || "/swagger-ui.html".equals(path)
+                || path.startsWith("/swagger-ui/")
+                || path.startsWith("/v3/api-docs/")
+                || "/v3/api-docs".equals(path);
     }
 }

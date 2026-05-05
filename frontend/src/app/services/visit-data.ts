@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
-import { VetLeave, Visit, VisitPayload } from '../models/app.models';
+import { Visit, VisitPayload } from '../models/app.models';
 
 @Injectable({ providedIn: 'root' })
 export class VisitDataService {
@@ -25,14 +25,6 @@ export class VisitDataService {
     return this.http.get<string[]>(`${this.baseUrl}/vet/${vetId}/unavailable-slots?date=${date}`);
   }
 
-  markVetLeave(vetId: number, date: string) {
-    return this.http.post<VetLeave>(`${this.baseUrl}/vet/${vetId}/leaves`, { vetId, date });
-  }
-
-  getVetLeaves(vetId: number) {
-    return this.http.get<VetLeave[]>(`${this.baseUrl}/vet/${vetId}/leaves`);
-  }
-
   getVisitsByPet(petId: number) {
     return this.http.get<Visit[]>(`${this.baseUrl}/pet/${petId}`);
   }
@@ -41,7 +33,7 @@ export class VisitDataService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 
-  updateVisitStatus(id: number, status: 'COMPLETED' | 'MISSED' | 'PENDING') {
-    return this.http.patch<Visit>(`${this.baseUrl}/${id}/status?status=${status}`, {});
+  updateVisitStatus(id: number, status: 'COMPLETED' | 'MISSED' | 'CANCELLED') {
+    return this.http.patch<Visit>(`${this.baseUrl}/${id}/status`, { status });
   }
 }

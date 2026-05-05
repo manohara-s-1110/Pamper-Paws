@@ -2,8 +2,8 @@ package com.pamperpaw.visit.controller;
 
 import com.pamperpaw.visit.dto.VisitRequestDTO;
 import com.pamperpaw.visit.dto.VisitResponseDTO;
-import com.pamperpaw.visit.dto.VetLeaveRequestDTO;
-import com.pamperpaw.visit.dto.VetLeaveResponseDTO;
+import com.pamperpaw.visit.dto.UpdateVisitPaymentStatusRequest;
+import com.pamperpaw.visit.dto.UpdateVisitStatusRequest;
 import com.pamperpaw.visit.service.VisitService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +43,28 @@ public class VisitController {
         service.deleteVisit(id);
     }
 
+    @DeleteMapping("/customer/{customerId}")
+    public void deleteVisitsByCustomer(@PathVariable Long customerId) {
+        service.deleteVisitsByCustomer(customerId);
+    }
+
+    @DeleteMapping("/pet/{petId}")
+    public void deleteVisitsByPet(@PathVariable Long petId) {
+        service.deleteVisitsByPet(petId);
+    }
+
+    @PatchMapping("/{id}/payment-status")
+    public VisitResponseDTO updateVisitPaymentStatus(@PathVariable Long id,
+                                                     @Valid @RequestBody UpdateVisitPaymentStatusRequest request) {
+        return service.updateVisitPaymentStatus(id, request.getPaymentStatus());
+    }
+
+    @PatchMapping("/{id}/status")
+    public VisitResponseDTO updateVisitStatus(@PathVariable Long id,
+                                              @Valid @RequestBody UpdateVisitStatusRequest request) {
+        return service.updateVisitStatus(id, request.getStatus());
+    }
+
     // 🔥 ADD THIS (for dashboard appointments)
     @GetMapping("/customer/{customerId}")
     public List<VisitResponseDTO> getVisitsByCustomer(@PathVariable Long customerId) {
@@ -68,23 +90,8 @@ public class VisitController {
     }
 
     @GetMapping("/vet/{vetId}/unavailable-slots")
-    public List<String> getUnavailableSlots(@PathVariable Long vetId, @RequestParam String date) {
+    public List<String> getUnavailableSlots(@PathVariable Long vetId,
+                                            @RequestParam String date) {
         return service.getUnavailableSlots(vetId, date);
-    }
-
-    @PostMapping("/vet/{vetId}/leaves")
-    public VetLeaveResponseDTO addVetLeave(@PathVariable Long vetId, @Valid @RequestBody VetLeaveRequestDTO dto) {
-        dto.setVetId(vetId);
-        return service.addVetLeave(dto);
-    }
-
-    @GetMapping("/vet/{vetId}/leaves")
-    public List<VetLeaveResponseDTO> getVetLeaves(@PathVariable Long vetId) {
-        return service.getVetLeaves(vetId);
-    }
-
-    @PatchMapping("/{id}/status")
-    public VisitResponseDTO updateVisitStatus(@PathVariable Long id, @RequestParam String status) {
-        return service.updateVisitStatus(id, status);
     }
 }

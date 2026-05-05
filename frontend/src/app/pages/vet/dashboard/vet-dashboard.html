@@ -40,6 +40,7 @@
       </article>
     </div>
 
+    <p class="form-message success" *ngIf="statusMessage()">{{ statusMessage() }}</p>
     <p class="form-message error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
 
     <div class="content-grid two">
@@ -49,24 +50,30 @@
             <span class="eyebrow">Leave</span>
             <h2>Mark leave</h2>
           </div>
-          <span class="pill">{{ leaveDates().length }} dates</span>
+          <span class="pill">{{ leaves().length }} dates</span>
         </div>
 
         <form class="app-form" [formGroup]="leaveForm" (ngSubmit)="markLeave()">
           <label class="field">
             <span>Leave date</span>
-            <input type="date" formControlName="date" [min]="today" />
-            <small class="field-hint error" *ngIf="leaveForm.controls.date.touched && leaveForm.controls.date.invalid">
-              Leave date is required.
-            </small>
+            <input type="date" formControlName="date" />
           </label>
-
-          <p class="form-message success" *ngIf="leaveMessage()">{{ leaveMessage() }}</p>
-          <button class="primary-button block" type="submit">Mark Leave</button>
+          <button class="secondary-button" type="submit">
+            {{ leaveSaving() ? 'Saving...' : 'Mark Leave' }}
+          </button>
         </form>
 
-        <div class="filter-chip-row" *ngIf="leaveDates().length">
-          <span class="filter-chip active" *ngFor="let date of leaveDates()">{{ date | date: 'MMM d, y' }}</span>
+        <div class="timeline-list scroll-panel" *ngIf="leaves().length">
+          <article class="timeline-item" *ngFor="let leave of leaves()">
+            <div class="timeline-date">
+              <strong>{{ leave.date | date: 'dd' }}</strong>
+              <span>{{ leave.date | date: 'MMM' }}</span>
+            </div>
+            <div class="timeline-copy">
+              <strong>On leave</strong>
+              <span>No customer slots will be offered.</span>
+            </div>
+          </article>
         </div>
       </article>
 

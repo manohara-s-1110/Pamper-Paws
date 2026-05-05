@@ -3,6 +3,9 @@ package com.pamperpaw.visit.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pamperpaw.visit.dto.VisitRequestDTO;
 import com.pamperpaw.visit.dto.VisitResponseDTO;
+import com.pamperpaw.visit.dto.UpdateVisitPaymentStatusRequest;
+import com.pamperpaw.visit.entity.PaymentMethod;
+import com.pamperpaw.visit.entity.PaymentStatus;
 import com.pamperpaw.visit.exception.GlobalExceptionHandler;
 import com.pamperpaw.visit.exception.ResourceNotFoundException;
 import com.pamperpaw.visit.service.VisitService;
@@ -24,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,6 +110,21 @@ class VisitControllerTest {
     }
 
     @Test
+    void updatePaymentStatusDelegatesToService() throws Exception {
+        VisitResponseDTO response = buildVisitResponse();
+        response.setPaymentStatus(PaymentStatus.SUCCESS);
+        UpdateVisitPaymentStatusRequest request = new UpdateVisitPaymentStatusRequest();
+        request.setPaymentStatus(PaymentStatus.SUCCESS);
+        when(visitService.updateVisitPaymentStatus(1L, PaymentStatus.SUCCESS)).thenReturn(response);
+
+        mockMvc.perform(patch("/visit/1/payment-status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("SUCCESS"));
+    }
+
+    @Test
     void resourceNotFoundIsHandled() throws Exception {
         when(visitService.getVisitById(99L)).thenThrow(new ResourceNotFoundException("Visit not found"));
 
@@ -118,8 +137,11 @@ class VisitControllerTest {
         VisitRequestDTO dto = new VisitRequestDTO();
         dto.setCustomerId(1L);
         dto.setVetId(2L);
+        dto.setPetId(3L);
         dto.setVisitDate("2026-04-13");
+        dto.setTimeSlot("10 AM - 11 AM");
         dto.setReason("Checkup");
+        dto.setPaymentMethod(PaymentMethod.ONLINE);
         return dto;
     }
 
@@ -128,8 +150,12 @@ class VisitControllerTest {
         dto.setId(1L);
         dto.setCustomerId(1L);
         dto.setVetId(2L);
+        dto.setPetId(3L);
         dto.setVisitDate("2026-04-13");
+        dto.setTimeSlot("10 AM - 11 AM");
         dto.setReason("Checkup");
+        dto.setPaymentMethod(PaymentMethod.ONLINE);
+        dto.setPaymentStatus(PaymentStatus.PENDING);
         return dto;
     }
 }

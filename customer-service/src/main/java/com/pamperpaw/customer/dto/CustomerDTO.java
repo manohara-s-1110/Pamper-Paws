@@ -7,19 +7,20 @@ public class CustomerDTO {
 	
     private Long id;
 
-   
+    @NotBlank(message = "Name is required")
     private String name;
     
-    
+    @NotBlank(message = "Username is required")
     private String username;
 
-  
+    @Email(message = "Invalid email format")
+    @NotBlank(message = "Email is required")
     private String email;
 
-  
+    @Pattern(regexp = "^[0-9]{10}$", message = "Phone must be 10 digits")
     private String phone;
 
-  
+    @NotBlank(message = "Address is required")
     private String address;
 
     public Long getId() { return id; }

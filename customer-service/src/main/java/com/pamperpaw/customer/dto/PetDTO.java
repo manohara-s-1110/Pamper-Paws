@@ -6,13 +6,13 @@ public class PetDTO {
 
     private Long id;
 
-   
+    @NotBlank(message = "Pet name is required")
     private String name;
 
-  
+    @NotBlank(message = "Pet type is required")
     private String type;
 
-   
+    @Min(value = 0, message = "Age cannot be negative")
     private int age;
 
     private String imageUrl;

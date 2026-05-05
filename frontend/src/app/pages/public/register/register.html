@@ -67,8 +67,14 @@
         <label class="field">
           <span>Password</span>
           <input type="password" formControlName="password" placeholder="Create a password" />
-          <small class="field-hint error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
-            Password needs 8+ characters, one uppercase letter, one number, and one special character.
+          <small class="field-hint error" *ngIf="form.controls.password.touched && form.controls.password.hasError('required')">
+            Password is required.
+          </small>
+          <small class="field-hint error" *ngIf="form.controls.password.touched && form.controls.password.hasError('minlength')">
+            Password must be at least 8 characters.
+          </small>
+          <small class="field-hint error" *ngIf="form.controls.password.touched && form.controls.password.hasError('pattern')">
+            Include one uppercase letter, one number, and one special character.
           </small>
         </label>
         <label class="field">
@@ -124,6 +130,13 @@
           <input type="text" formControlName="availableTime" placeholder="9 AM - 5 PM" />
           <small class="field-hint error" *ngIf="form.controls.availableTime.touched && form.controls.availableTime.invalid">
             Available time is required.
+          </small>
+        </label>
+        <label class="field">
+          <span>Consultation fee</span>
+          <input type="number" min="1" formControlName="consultationFee" placeholder="500" />
+          <small class="field-hint error" *ngIf="form.controls.consultationFee.touched && form.controls.consultationFee.invalid">
+            Consultation fee must be greater than zero.
           </small>
         </label>
       </div>

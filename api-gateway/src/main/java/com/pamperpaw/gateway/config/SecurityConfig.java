@@ -22,12 +22,12 @@ public class SecurityConfig {
                                 "/pets/**",
                                 "/vets/**",
                                 "/visit/**",
+                                "/payments/**",
                                 "/admin/**",
-                                "/*-service/v3/api-docs",
-                                "/v3/api-docs/**",
-                                "/api-docs/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
                                 "/actuator/health",
                                 "/actuator/info"
                         ).permitAll()

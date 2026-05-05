@@ -15,8 +15,10 @@ import com.pamperpaw.admin.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -91,6 +93,12 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<VisitDTO> getAllVisits() {
         return visitClient.getAllVisits();
+    }
+
+    @Async
+    @Override
+    public CompletableFuture<List<VisitDTO>> getAllVisitsAsync() {
+        return CompletableFuture.completedFuture(getAllVisits());
     }
 
     @Override

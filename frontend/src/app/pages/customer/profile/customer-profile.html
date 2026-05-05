@@ -106,4 +106,21 @@
       </button>
     </form>
   </article>
+
+  <article class="section-card narrow">
+    <div class="section-header">
+      <div>
+        <span class="eyebrow">Account deletion</span>
+        <h2>Delete customer account</h2>
+      </div>
+    </div>
+
+    <div class="detail-panel">
+      <strong>Permanent removal</strong>
+      <p>This removes your customer profile, saved pets, and appointment records.</p>
+      <button class="ghost-button danger" type="button" (click)="deleteAccount()">
+        {{ deletingAccount() ? 'Deleting...' : 'Delete account' }}
+      </button>
+    </div>
+  </article>
 </section>

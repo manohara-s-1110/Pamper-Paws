@@ -1,6 +1,7 @@
 package com.pamperpaw.customer.service.impl;
 
 import com.pamperpaw.customer.dto.CustomerDTO;
+import com.pamperpaw.customer.client.VisitClient;
 import com.pamperpaw.customer.entity.Customer;
 import com.pamperpaw.customer.exception.DuplicateResourceException;
 import com.pamperpaw.customer.exception.ResourceNotFoundException;
@@ -19,6 +20,7 @@ import java.util.List;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository repo;
+    private final VisitClient visitClient;
 
     @Override
     public CustomerDTO createCustomer(CustomerDTO dto) {
@@ -78,6 +80,7 @@ public class CustomerServiceImpl implements CustomerService {
     public void deleteCustomer(Long id) {
         Customer customer = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
+        visitClient.deleteVisitsByCustomer(id);
         repo.delete(customer);
         log.info("Deleted customer with id={}", id);
     }

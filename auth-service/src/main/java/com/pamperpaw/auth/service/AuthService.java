@@ -159,6 +159,7 @@ public class AuthService {
         profileRequest.setClinicAddress(request.getClinicAddress().trim());
         profileRequest.setAvailableDays(request.getAvailableDays().trim());
         profileRequest.setAvailableTime(request.getAvailableTime().trim());
+        profileRequest.setConsultationFee(request.getConsultationFee());
         return profileRequest;
     }
 

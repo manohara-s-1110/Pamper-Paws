@@ -13,4 +13,6 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     List<Visit> findByPetId(Long petId);
     List<Visit> findByVetIdAndVisitDate(Long vetId, String visitDate);
     boolean existsByVetIdAndVisitDateAndTimeSlot(Long vetId, String visitDate, String timeSlot);
+    void deleteByCustomerId(Long customerId);
+    void deleteByPetId(Long petId);
 }

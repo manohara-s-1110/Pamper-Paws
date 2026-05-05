@@ -51,6 +51,7 @@ export class AdminUsersComponent {
     clinicAddress: ['', Validators.required],
     availableDays: ['', Validators.required],
     availableTime: ['', Validators.required],
+    consultationFee: [500, [Validators.required, Validators.min(1)]],
   });
 
   constructor() {
@@ -143,6 +144,7 @@ export class AdminUsersComponent {
       clinicAddress: vet.clinicAddress,
       availableDays: vet.availableDays,
       availableTime: vet.availableTime,
+      consultationFee: vet.consultationFee ?? 500,
     });
   }
 

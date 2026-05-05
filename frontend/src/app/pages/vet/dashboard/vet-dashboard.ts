@@ -3,7 +3,7 @@ import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
-import { Customer, Vet, Visit } from '../../../models/app.models';
+import { Customer, Vet, VetLeave, Visit } from '../../../models/app.models';
 import { CustomerDataService } from '../../../services/customer-data';
 import { SessionAuthService } from '../../../services/session-auth';
 import { VetDataService } from '../../../services/vet-data';
@@ -26,9 +26,14 @@ export class VetDashboardComponent {
   readonly vet = signal<Vet | null>(null);
   readonly appointments = signal<Visit[]>([]);
   readonly customerDirectory = signal<Record<number, Customer>>({});
-  readonly leaveDates = signal<string[]>([]);
-  readonly leaveMessage = signal('');
+  readonly leaves = signal<VetLeave[]>([]);
   readonly errorMessage = signal('');
+  readonly statusMessage = signal('');
+  readonly leaveSaving = signal(false);
+
+  readonly leaveForm = this.fb.nonNullable.group({
+    date: ['', Validators.required],
+  });
 
   readonly today = new Date().toISOString().split('T')[0];
   readonly todaysAppointments = computed(() =>
@@ -46,10 +51,6 @@ export class VetDashboardComponent {
       .filter((visit) => getAppointmentStatus(visit) !== 'Completed')
       .sort((left, right) => appointmentDateTimeValue(left) - appointmentDateTimeValue(right))[0] ?? null,
   );
-
-  readonly leaveForm = this.fb.nonNullable.group({
-    date: ['', Validators.required],
-  });
 
   constructor() {
     this.loadData();
@@ -72,27 +73,26 @@ export class VetDashboardComponent {
   }
 
   markLeave() {
-    if (!this.vet()) {
-      return;
-    }
-
-    if (this.leaveForm.invalid) {
+    if (!this.vet() || this.leaveForm.invalid || this.leaveSaving()) {
       this.leaveForm.markAllAsTouched();
-      this.errorMessage.set('Please fill all required fields');
+      this.errorMessage.set('Choose a leave date first.');
       return;
     }
 
+    this.leaveSaving.set(true);
     this.errorMessage.set('');
-    this.leaveMessage.set('');
+    this.statusMessage.set('');
 
-    this.visits.markVetLeave(this.vet()!.id, this.leaveForm.controls.date.value).subscribe({
-      next: (leave) => {
-        this.leaveDates.update((dates) => [...new Set([...dates, leave.date])].sort());
+    this.vets.addLeave(this.vet()!.id, this.leaveForm.controls.date.value).subscribe({
+      next: () => {
+        this.leaveSaving.set(false);
+        this.statusMessage.set('Leave marked successfully.');
         this.leaveForm.reset({ date: '' });
-        this.leaveMessage.set('Leave marked successfully.');
+        this.loadLeaves(this.vet()!.id);
       },
       error: (error) => {
-        this.errorMessage.set(error?.error?.message ?? 'Unable to mark leave for that date.');
+        this.leaveSaving.set(false);
+        this.errorMessage.set(error?.error?.message ?? 'Unable to mark leave right now.');
       },
     });
   }
@@ -106,14 +106,13 @@ export class VetDashboardComponent {
     this.vets.getVetByUsername(username).subscribe({
       next: (vet) => {
         this.vet.set(vet);
+        this.loadLeaves(vet.id);
         forkJoin({
           appointments: this.visits.getVisitsByVet(vet.id),
           customers: this.customers.getAllCustomers(),
-          leaves: this.visits.getVetLeaves(vet.id),
         }).subscribe({
-          next: ({ appointments, customers, leaves }) => {
+          next: ({ appointments, customers }) => {
             this.appointments.set(appointments);
-            this.leaveDates.set(leaves.map((leave) => leave.date));
             this.customerDirectory.set(
               customers.reduce<Record<number, Customer>>((accumulator, customer) => {
                 accumulator[customer.id] = customer;
@@ -129,6 +128,13 @@ export class VetDashboardComponent {
       error: () => {
         this.errorMessage.set('Unable to load your veterinary profile right now.');
       },
+    });
+  }
+
+  private loadLeaves(vetId: number) {
+    this.vets.getLeaves(vetId).subscribe({
+      next: (leaves) => this.leaves.set(leaves),
+      error: () => this.leaves.set([]),
     });
   }
 }

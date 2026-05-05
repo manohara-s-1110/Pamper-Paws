@@ -3,6 +3,8 @@ package com.pamperpaw.vet.dto;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -11,29 +13,32 @@ public class VetDTO {
 
     private Long id;
 
-   
+    @NotBlank(message = "Username is required")
     private String username;
 
-    
+    @NotBlank(message = "Name is required")
     private String name;
 
-
+    @NotBlank(message = "Specialization is required")
     private String specialization;
 
-  
+    @Min(value = 0, message = "Experience must be positive")
     private int experience;
 
     private String phone;
 
- 
+    @Email(message = "Invalid email")
     private String email;
 
-  
+    @NotBlank(message = "Clinic address is required")
     private String clinicAddress;
 
-  
+    @NotBlank(message = "Available days are required")
     private String availableDays;
 
-
+    @NotBlank(message = "Available time is required")
     private String availableTime;
+
+    @DecimalMin(value = "0.0", inclusive = false, message = "Consultation fee must be greater than zero")
+    private BigDecimal consultationFee;
 }

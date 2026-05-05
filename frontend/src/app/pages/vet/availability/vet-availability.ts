@@ -98,6 +98,7 @@ export class VetAvailabilityComponent {
         clinicAddress: vet.clinicAddress,
         availableDays: this.selectedDays().join(', '),
         availableTime: `${startTime} - ${endTime}`,
+        consultationFee: vet.consultationFee ?? 500,
       })
       .subscribe({
         next: (updatedVet) => {

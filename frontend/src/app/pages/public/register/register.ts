@@ -6,8 +6,6 @@ import { Router, RouterLink } from '@angular/router';
 import { UserRole } from '../../../models/app.models';
 import { SessionAuthService } from '../../../services/session-auth';
 
-const STRONG_PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
-
 @Component({
   selector: 'app-public-register',
   standalone: true,
@@ -32,7 +30,11 @@ export class PublicRegisterComponent {
     name: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
     phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
-    password: ['', [Validators.required, Validators.minLength(8), Validators.pattern(STRONG_PASSWORD_PATTERN)]],
+    password: ['', [
+      Validators.required,
+      Validators.minLength(8),
+      Validators.pattern(/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/),
+    ]],
     confirmPassword: ['', Validators.required],
     address: [''],
     specialization: [''],
@@ -40,6 +42,7 @@ export class PublicRegisterComponent {
     clinicAddress: [''],
     availableDays: [''],
     availableTime: [''],
+    consultationFee: [500, [Validators.required, Validators.min(1)]],
   });
 
   constructor() {
@@ -120,6 +123,7 @@ export class PublicRegisterComponent {
         clinicAddress: values.clinicAddress,
         availableDays: values.availableDays,
         availableTime: values.availableTime,
+        consultationFee: Number(values.consultationFee),
       })
       .subscribe({
         next: () => this.finishRegistration(),
@@ -145,6 +149,7 @@ export class PublicRegisterComponent {
       clinicAddress: '',
       availableDays: '',
       availableTime: '',
+      consultationFee: 500,
     });
 
     setTimeout(() => {
@@ -164,6 +169,7 @@ export class PublicRegisterComponent {
     const clinicAddress = this.form.controls.clinicAddress;
     const availableDays = this.form.controls.availableDays;
     const availableTime = this.form.controls.availableTime;
+    const consultationFee = this.form.controls.consultationFee;
 
     if (role === 'CUSTOMER') {
       address.setValidators([Validators.required]);
@@ -172,6 +178,7 @@ export class PublicRegisterComponent {
       clinicAddress.clearValidators();
       availableDays.clearValidators();
       availableTime.clearValidators();
+      consultationFee.clearValidators();
     } else {
       address.clearValidators();
       specialization.setValidators([Validators.required]);
@@ -179,6 +186,7 @@ export class PublicRegisterComponent {
       clinicAddress.setValidators([Validators.required]);
       availableDays.setValidators([Validators.required]);
       availableTime.setValidators([Validators.required]);
+      consultationFee.setValidators([Validators.required, Validators.min(1)]);
     }
 
     address.updateValueAndValidity({ emitEvent: false });
@@ -187,5 +195,6 @@ export class PublicRegisterComponent {
     clinicAddress.updateValueAndValidity({ emitEvent: false });
     availableDays.updateValueAndValidity({ emitEvent: false });
     availableTime.updateValueAndValidity({ emitEvent: false });
+    consultationFee.updateValueAndValidity({ emitEvent: false });
   }
 }

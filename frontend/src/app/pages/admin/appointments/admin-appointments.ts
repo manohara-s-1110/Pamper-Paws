@@ -4,13 +4,11 @@ import { forkJoin } from 'rxjs';
 
 import { AdminDataService } from '../../../services/admin-data';
 import { Customer, Vet, Visit } from '../../../models/app.models';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge';
-import { getAppointmentStatus } from '../../../utils/appointment-ui';
 
 @Component({
   selector: 'app-admin-appointments',
   standalone: true,
-  imports: [NgIf, NgFor, StatusBadgeComponent],
+  imports: [NgIf, NgFor],
   templateUrl: './admin-appointments.html',
 })
 export class AdminAppointmentsComponent {
@@ -30,10 +28,6 @@ export class AdminAppointmentsComponent {
 
   vetName(vetId: number) {
     return this.vetDirectory()[vetId]?.name ?? `Vet #${vetId}`;
-  }
-
-  appointmentStatus(visit: Visit) {
-    return getAppointmentStatus(visit);
   }
 
   deleteVisit(id: number) {

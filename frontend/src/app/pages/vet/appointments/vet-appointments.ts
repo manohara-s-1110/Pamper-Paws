@@ -31,10 +31,9 @@ export class VetAppointmentsComponent {
   readonly patientHistory = signal<Visit[]>([]);
   readonly historyLoading = signal(false);
   readonly historyError = signal('');
+  readonly activeFilter = signal<AppointmentFilter>('today');
   readonly statusMessage = signal('');
   readonly errorMessage = signal('');
-  readonly updatingAppointmentId = signal<number | null>(null);
-  readonly activeFilter = signal<AppointmentFilter>('today');
 
   readonly filters: { label: string; value: AppointmentFilter }[] = [
     { label: 'Today', value: 'today' },
@@ -65,6 +64,16 @@ export class VetAppointmentsComponent {
   }
 
   petName(petId?: number) {
+    const selected = this.selectedAppointment();
+    if (selected && selected.petId === petId && selected.petName) {
+      return selected.petName;
+    }
+
+    const visit = this.appointments().find((appointment) => appointment.petId === petId && appointment.petName);
+    if (visit?.petName) {
+      return visit.petName;
+    }
+
     if (!petId) {
       return 'Pet details unavailable';
     }
@@ -118,28 +127,19 @@ export class VetAppointmentsComponent {
   }
 
   updateStatus(visit: Visit, status: 'COMPLETED' | 'MISSED') {
-    if (this.updatingAppointmentId()) {
-      return;
-    }
-
-    this.updatingAppointmentId.set(visit.id);
     this.statusMessage.set('');
     this.errorMessage.set('');
 
     this.visits.updateVisitStatus(visit.id, status).subscribe({
       next: (updatedVisit) => {
-        this.updatingAppointmentId.set(null);
         this.appointments.update((appointments) =>
           appointments.map((appointment) => appointment.id === updatedVisit.id ? updatedVisit : appointment),
         );
-        this.selectedAppointment.update((selected) =>
-          selected?.id === updatedVisit.id ? updatedVisit : selected,
-        );
-        this.statusMessage.set(`Appointment marked ${status.toLowerCase()}.`);
+        this.selectedAppointment.update((selected) => selected?.id === updatedVisit.id ? updatedVisit : selected);
+        this.statusMessage.set(status === 'COMPLETED' ? 'Appointment marked completed.' : 'Appointment marked missed.');
       },
-      error: (error) => {
-        this.updatingAppointmentId.set(null);
-        this.errorMessage.set(error?.error?.message ?? 'Unable to update appointment status.');
+      error: () => {
+        this.errorMessage.set('Unable to update appointment status right now.');
       },
     });
   }

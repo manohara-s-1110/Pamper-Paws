@@ -41,6 +41,7 @@ export interface Vet {
   clinicAddress: string;
   availableDays: string;
   availableTime: string;
+  consultationFee?: number;
 }
 
 export interface Visit {
@@ -51,14 +52,13 @@ export interface Visit {
   visitDate: string;
   timeSlot: string;
   reason: string;
-  status?: 'PENDING' | 'COMPLETED' | 'MISSED';
   notes?: string;
-}
-
-export interface VetLeave {
-  id: number;
-  vetId: number;
-  date: string;
+  petName?: string;
+  status?: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'MISSED' | 'CANCELLED';
+  paymentMethod?: 'ONLINE' | 'CASH';
+  paymentStatus?: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  consultationFee?: number;
+  payment?: PaymentInitiateResponse;
 }
 
 export interface RegisterAuthPayload {
@@ -82,6 +82,7 @@ export interface VetRegisterPayload {
   clinicAddress: string;
   availableDays: string;
   availableTime: string;
+  consultationFee: number;
 }
 
 export interface CustomerPayload {
@@ -102,6 +103,7 @@ export interface VetPayload {
   clinicAddress: string;
   availableDays: string;
   availableTime: string;
+  consultationFee: number;
 }
 
 export interface PetPayload {
@@ -118,6 +120,53 @@ export interface VisitPayload {
   visitDate: string;
   timeSlot: string;
   reason: string;
+  paymentMethod: 'ONLINE' | 'CASH';
+}
+
+export interface PaymentInitiateResponse {
+  paymentId: number;
+  appointmentId: number;
+  userId: number;
+  amount: number;
+  paymentMethod: 'ONLINE' | 'CASH';
+  paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  razorpayOrderId?: string;
+  razorpayKeyId?: string;
+  currency?: string;
+}
+
+export interface PaymentInitiatePayload {
+  appointmentId: number;
+  userId: number;
+  amount: number;
+  paymentMethod: 'ONLINE' | 'CASH';
+}
+
+export interface PaymentVerifyPayload {
+  appointmentId: number;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}
+
+export interface Payment {
+  id: number;
+  appointmentId: number;
+  userId: number;
+  amount: number;
+  paymentMethod: 'ONLINE' | 'CASH';
+  paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  transactionId?: string;
+  razorpayOrderId?: string;
+  refundTransactionId?: string;
+  refundedAt?: string;
+  createdAt: string;
+}
+
+export interface VetLeave {
+  id: number;
+  vetId: number;
+  date: string;
 }
 
 export interface ChangePasswordPayload {

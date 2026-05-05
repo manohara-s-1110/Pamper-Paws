@@ -2,7 +2,6 @@ package com.pamperpaw.visit.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +20,12 @@ public class GlobalExceptionHandler {
                 .body(buildErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND, request, null));
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(IllegalStateException ex, ServletWebRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(buildErrorResponse(ex.getMessage(), HttpStatus.CONFLICT, request, null));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex,
                                                                     ServletWebRequest request) {
@@ -32,20 +37,6 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorResponse("Validation failed", HttpStatus.BAD_REQUEST, request, errors));
-    }
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessRuleException(IllegalStateException ex,
-                                                                     ServletWebRequest request) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(buildErrorResponse(ex.getMessage(), HttpStatus.CONFLICT, request, null));
-    }
-
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex,
-                                                            ServletWebRequest request) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(buildErrorResponse("Slot already booked", HttpStatus.CONFLICT, request, null));
     }
 
     @ExceptionHandler(Exception.class)

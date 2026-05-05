@@ -40,7 +40,7 @@ public class Customer {
     @NotBlank(message = "Address is required")
     private String address;
 
-	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL)
+	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonManagedReference
     private List<Pet> pets;
 }

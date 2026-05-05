@@ -1,6 +1,9 @@
 package com.pamperpaw.vet.controller;
 
 import com.pamperpaw.vet.dto.VetDTO;
+import com.pamperpaw.vet.dto.VetFeeResponse;
+import com.pamperpaw.vet.dto.VetLeaveRequest;
+import com.pamperpaw.vet.dto.VetLeaveResponse;
 import com.pamperpaw.vet.service.VetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -67,10 +70,38 @@ public class VetController {
     public List<VetDTO> getByExperience(@RequestParam int experience) {
         return vetService.getVetsByExperience(experience);
     }
+
+    @GetMapping("/filter")
+    public List<VetDTO> filterVets(@RequestParam(required = false) String location,
+                                   @RequestParam(required = false) Integer experience,
+                                   @RequestParam(required = false) String specialization) {
+        return vetService.filterVets(location, experience, specialization);
+    }
     
     @GetMapping("/{id}/slots")
     public List<String> getSlots(@PathVariable Long id,
                                 @RequestParam String date) {
         return vetService.getAvailableSlots(id, date);
+    }
+
+    @GetMapping("/{id}/fee")
+    public VetFeeResponse getFee(@PathVariable Long id) {
+        return vetService.getConsultationFee(id);
+    }
+
+    @PostMapping("/{id}/leaves")
+    public VetLeaveResponse addLeave(@PathVariable Long id,
+                                     @Valid @RequestBody VetLeaveRequest request) {
+        return vetService.addLeave(id, request.getDate());
+    }
+
+    @GetMapping("/{id}/leave-records")
+    public List<VetLeaveResponse> getLeaves(@PathVariable Long id) {
+        return vetService.getLeaves(id);
+    }
+
+    @GetMapping("/{id}/leaves")
+    public List<String> getLeaveDates(@PathVariable Long id) {
+        return vetService.getLeaveDates(id);
     }
 }

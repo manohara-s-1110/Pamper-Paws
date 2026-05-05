@@ -2,8 +2,8 @@ package com.pamperpaw.visit.service;
 
 import com.pamperpaw.visit.dto.VisitRequestDTO;
 import com.pamperpaw.visit.dto.VisitResponseDTO;
-import com.pamperpaw.visit.dto.VetLeaveRequestDTO;
-import com.pamperpaw.visit.dto.VetLeaveResponseDTO;
+import com.pamperpaw.visit.entity.PaymentStatus;
+import com.pamperpaw.visit.entity.VisitStatus;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -20,6 +20,10 @@ public interface VisitService {
 
     void deleteVisit(Long id);
 
+    void deleteVisitsByCustomer(Long customerId);
+
+    void deleteVisitsByPet(Long petId);
+
     // 🔥 ADD THIS (for frontend dashboard)
     List<VisitResponseDTO> getVisitsByCustomer(Long customerId);
 
@@ -31,9 +35,7 @@ public interface VisitService {
 
     List<String> getUnavailableSlots(Long vetId, String date);
 
-    VetLeaveResponseDTO addVetLeave(VetLeaveRequestDTO dto);
+    VisitResponseDTO updateVisitPaymentStatus(Long id, PaymentStatus paymentStatus);
 
-    List<VetLeaveResponseDTO> getVetLeaves(Long vetId);
-
-    VisitResponseDTO updateVisitStatus(Long id, String status);
+    VisitResponseDTO updateVisitStatus(Long id, VisitStatus status);
 }

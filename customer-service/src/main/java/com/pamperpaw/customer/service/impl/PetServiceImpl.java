@@ -74,6 +74,13 @@ public class PetServiceImpl implements PetService {
     }
 
     @Override
+    public PetDTO getPetById(Long petId) {
+        Pet pet = petRepo.findById(petId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pet not found with id: " + petId));
+        return PetMapper.toDTO(pet);
+    }
+
+    @Override
     public void deletePet(Long petId) {
 
         Pet pet = petRepo.findById(petId)

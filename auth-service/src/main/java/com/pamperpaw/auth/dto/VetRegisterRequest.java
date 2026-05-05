@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class VetRegisterRequest {
 
@@ -44,4 +46,7 @@ public class VetRegisterRequest {
 
     @NotBlank(message = "Available time is required")
     private String availableTime;
+
+    @Min(value = 1, message = "Consultation fee must be greater than zero")
+    private BigDecimal consultationFee;
 }

@@ -61,13 +61,14 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
             }
 
             String role = jwtUtil.extractRole(token);
+            String username = jwtUtil.extractUsername(token);
             if (!isAuthorized(role, method, path)) {
                 log.warn("Forbidden role={} access to method={} path={}", role, method, path);
                 exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                 return exchange.getResponse().setComplete();
             }
 
-            return chain.filter(withInternalServiceHeader(exchange.getRequest(), exchange));
+            return chain.filter(withGatewayHeaders(exchange.getRequest(), exchange, username, role));
         };
     }
 
@@ -80,12 +81,25 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         return exchange.mutate().request(requestWithInternalHeader).build();
     }
 
+    private ServerWebExchange withGatewayHeaders(ServerHttpRequest request,
+                                                 ServerWebExchange exchange,
+                                                 String username,
+                                                 String role) {
+        ServerHttpRequest requestWithHeaders = request
+                .mutate()
+                .header(INTERNAL_SERVICE_HEADER, internalServiceKey)
+                .header("X-User-Name", username)
+                .header("X-User-Role", role)
+                .build();
+
+        return exchange.mutate().request(requestWithHeaders).build();
+    }
+
     private boolean isPublicEndpoint(String path) {
         return path.startsWith("/auth/")
-                || path.startsWith("/v3/api-docs")
-                || path.startsWith("/api-docs")
                 || path.equals("/swagger-ui.html")
-                || path.startsWith("/swagger-ui/");
+                || path.startsWith("/swagger-ui/")
+                || path.startsWith("/v3/api-docs/");
     }
 
     private boolean isAuthorized(String role, HttpMethod method, String path) {
@@ -94,7 +108,8 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
                     || path.startsWith("/customers")
                     || path.startsWith("/pets")
                     || path.startsWith("/vets")
-                    || path.startsWith("/visit");
+                    || path.startsWith("/visit")
+                    || path.startsWith("/payments");
         }
 
         if ("CUSTOMER".equals(role)) {
@@ -115,8 +130,9 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
                     || path.equals("/vets")
                     || path.startsWith("/vets/")
                     || path.startsWith("/visit/customer/")
-                    || (path.startsWith("/visit/vet/") && (path.endsWith("/unavailable-slots") || path.endsWith("/leaves")))
-                    || path.startsWith("/visit/pet/");
+                    || path.matches("/visit/vet/\\d+/unavailable-slots")
+                    || path.startsWith("/visit/pet/")
+                    || path.startsWith("/payments/");
         }
 
         if (HttpMethod.PUT.equals(method)) {
@@ -124,11 +140,14 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         }
 
         if (HttpMethod.POST.equals(method)) {
-            return path.startsWith("/pets/customer/") || path.equals("/visit");
+            return path.startsWith("/pets/customer/")
+                    || path.equals("/visit")
+                    || path.equals("/payments/initiate")
+                    || path.equals("/payments/verify");
         }
 
         if (HttpMethod.DELETE.equals(method)) {
-            return path.startsWith("/pets/") || path.startsWith("/visit/");
+            return path.startsWith("/pets/") || path.startsWith("/visit/") || path.startsWith("/customers/");
         }
 
         return false;
@@ -138,6 +157,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         if (HttpMethod.GET.equals(method)) {
             return path.equals("/customers")
                     || path.startsWith("/vets/username/")
+                    || path.startsWith("/vets/")
                     || path.startsWith("/visit/vet/")
                     || path.startsWith("/visit/pet/");
         }
@@ -147,11 +167,11 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         }
 
         if (HttpMethod.POST.equals(method)) {
-            return path.startsWith("/visit/vet/") && path.endsWith("/leaves");
+            return path.matches("/vets/\\d+/leaves");
         }
 
         if (HttpMethod.PATCH.equals(method)) {
-            return path.startsWith("/visit/");
+            return path.matches("/visit/\\d+/status");
         }
 
         return false;

@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { Customer } from '../../../models/app.models';
 import { CustomerDataService } from '../../../services/customer-data';
@@ -16,6 +17,7 @@ export class CustomerProfileComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(SessionAuthService);
   private readonly customers = inject(CustomerDataService);
+  private readonly router = inject(Router);
 
   readonly customer = signal<Customer | null>(null);
   readonly statusMessage = signal('');
@@ -24,6 +26,7 @@ export class CustomerProfileComponent {
   readonly passwordStatusMessage = signal('');
   readonly passwordErrorMessage = signal('');
   readonly changingPassword = signal(false);
+  readonly deletingAccount = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     username: [{ value: '', disabled: true }],
@@ -112,6 +115,32 @@ export class CustomerProfileComponent {
           this.passwordErrorMessage.set(error?.error?.message ?? 'Unable to update password right now.');
         },
       });
+  }
+
+  deleteAccount() {
+    const customer = this.customer();
+    if (!customer || this.deletingAccount()) {
+      return;
+    }
+
+    if (!confirm('Delete your account? This will permanently remove your pets and appointments.')) {
+      return;
+    }
+
+    this.deletingAccount.set(true);
+    this.statusMessage.set('');
+    this.errorMessage.set('');
+
+    this.customers.deleteCustomer(customer.id).subscribe({
+      next: () => {
+        this.auth.logout();
+        this.router.navigateByUrl('/login');
+      },
+      error: () => {
+        this.deletingAccount.set(false);
+        this.errorMessage.set('Unable to delete your account right now.');
+      },
+    });
   }
 
   private loadCustomer() {

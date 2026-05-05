@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequiredArgsConstructor
@@ -69,6 +70,11 @@ public class AdminController {
     @GetMapping("/visits")
     public ResponseEntity<List<VisitDTO>> getAllVisits() {
         return ResponseEntity.ok(adminService.getAllVisits());
+    }
+
+    @GetMapping("/visits/async")
+    public CompletableFuture<List<VisitDTO>> getAllVisitsAsync() {
+        return adminService.getAllVisitsAsync();
     }
 
     @GetMapping("/visits/{id}")

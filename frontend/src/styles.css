@@ -631,11 +631,6 @@ p {
   color: #0369a1;
 }
 
-.status-badge.missed {
-  background: rgba(220, 38, 38, 0.12);
-  color: var(--danger);
-}
-
 .appointment-list {
   gap: 0.85rem;
 }

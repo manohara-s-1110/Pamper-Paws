@@ -8,6 +8,7 @@ public interface PetService {
     PetDTO addPet(Long customerId, PetDTO dto);
 
     PetDTO updatePet(Long petId, PetDTO dto);
+    PetDTO getPetById(Long petId);
     void deletePet(Long petId);
     List<PetDTO> getPetsByCustomer(Long customerId);
 }

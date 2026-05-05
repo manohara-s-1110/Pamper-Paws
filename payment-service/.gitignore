@@ -1,0 +1,38 @@
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+*.gz
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+coverage/
+jacoco.exec
+
+# Local tooling
+.m2/
+.maven-home/
+.tools/
