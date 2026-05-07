@@ -18,6 +18,6 @@ public interface PaymentClient {
     @GetMapping("/payments/{appointmentId}")
     PaymentResponse getPayment(@PathVariable Long appointmentId);
 
-    @PostMapping("/payments/{appointmentId}/refund")
+    @PostMapping("/payments/refund/{appointmentId}")
     PaymentResponse refund(@PathVariable Long appointmentId);
 }

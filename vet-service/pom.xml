@@ -149,6 +149,15 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/pamperpaw/vet/config/**</exclude>
+                        <exclude>com/pamperpaw/vet/dto/**</exclude>
+                        <exclude>com/pamperpaw/vet/entity/**</exclude>
+                        <exclude>com/pamperpaw/vet/exception/**</exclude>
+                        <exclude>com/pamperpaw/vet/VetServiceApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

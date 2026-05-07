@@ -24,7 +24,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -68,7 +74,9 @@ public class VisitServiceImpl implements VisitService {
                 .build());
         log.info("Created visit with id={}", savedVisit.getId());
         VisitResponseDTO response = mapToResponse(savedVisit);
-        response.setPetName(pet.getName());
+        if (pet != null) {
+            response.setPetName(pet.getName());
+        }
         response.setPayment(payment);
         return response;
     }
@@ -267,13 +275,41 @@ public class VisitServiceImpl implements VisitService {
     @Override
     @Transactional
     public VisitResponseDTO updateVisitStatus(Long id, VisitStatus status) {
+        if (VisitStatus.CANCELLED.equals(status)) {
+            return cancelVisit(id);
+        }
+
         Visit visit = visitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Visit not found with id: " + id));
         visit.setStatus(status);
-        if (VisitStatus.CANCELLED.equals(status) || VisitStatus.MISSED.equals(status)) {
+        if (VisitStatus.MISSED.equals(status)) {
             triggerRefundIfNeeded(visit);
         }
         return mapToResponse(visitRepository.save(visit));
+    }
+
+    @Override
+    @Transactional
+    public VisitResponseDTO cancelVisit(Long appointmentId) {
+        Visit visit = visitRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Visit not found with id: " + appointmentId));
+
+        validateCancellable(visit);
+        log.info("Starting cancellation flow visitId={} paymentMethod={} paymentStatus={}",
+                visit.getId(), visit.getPaymentMethod(), visit.getPaymentStatus());
+
+        if (PaymentMethod.ONLINE.equals(visit.getPaymentMethod()) && PaymentStatus.SUCCESS.equals(visit.getPaymentStatus())) {
+            PaymentResponse refund = paymentClient.refund(visit.getId());
+            if (!PaymentStatus.REFUNDED.equals(refund.getPaymentStatus())) {
+                throw new IllegalStateException("Refund did not complete. Appointment was not cancelled.");
+            }
+            visit.setPaymentStatus(PaymentStatus.REFUNDED);
+        }
+
+        visit.setStatus(VisitStatus.CANCELLED);
+        Visit saved = visitRepository.save(visit);
+        log.info("Cancellation completed visitId={} paymentStatus={}", saved.getId(), saved.getPaymentStatus());
+        return mapToResponse(saved);
     }
 
     private String resolvePetName(Long petId) {
@@ -294,12 +330,48 @@ public class VisitServiceImpl implements VisitService {
             return;
         }
 
-        try {
-            PaymentResponse refund = paymentClient.refund(visit.getId());
-            visit.setPaymentStatus(refund.getPaymentStatus());
-        } catch (Exception ex) {
-            log.warn("Refund trigger failed for visit id={}", visit.getId(), ex);
+        PaymentResponse refund = paymentClient.refund(visit.getId());
+        if (!PaymentStatus.REFUNDED.equals(refund.getPaymentStatus())) {
+            throw new IllegalStateException("Refund did not complete");
         }
+        visit.setPaymentStatus(refund.getPaymentStatus());
+    }
+
+    private void validateCancellable(Visit visit) {
+        if (VisitStatus.CANCELLED.equals(visit.getStatus())) {
+            throw new IllegalStateException("Appointment is already cancelled");
+        }
+        if (VisitStatus.COMPLETED.equals(visit.getStatus()) || VisitStatus.MISSED.equals(visit.getStatus())) {
+            throw new IllegalStateException("Only future appointments can be cancelled");
+        }
+        if (!LocalDateTime.now().isBefore(resolveScheduledStart(visit))) {
+            throw new IllegalStateException("Appointment can only be cancelled before the scheduled time");
+        }
+    }
+
+    private LocalDateTime resolveScheduledStart(Visit visit) {
+        try {
+            LocalDate date = LocalDate.parse(visit.getVisitDate());
+            String start = visit.getTimeSlot().split("-")[0].trim().toUpperCase(Locale.ENGLISH);
+            return LocalDateTime.of(date, parseSlotStart(start));
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("Unable to validate appointment time for cancellation");
+        }
+    }
+
+    private LocalTime parseSlotStart(String value) {
+        List<DateTimeFormatter> formatters = List.of(
+                DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH),
+                DateTimeFormatter.ofPattern("h a", Locale.ENGLISH)
+        );
+        for (DateTimeFormatter formatter : formatters) {
+            try {
+                return LocalTime.parse(value, formatter);
+            } catch (DateTimeParseException ignored) {
+                // Try the next supported slot format.
+            }
+        }
+        throw new IllegalStateException("Unsupported time slot format");
     }
 
     private void validateSlotAvailable(Long vetId, String visitDate, String timeSlot) {

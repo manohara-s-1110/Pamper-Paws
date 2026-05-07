@@ -135,6 +135,15 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/pamperpaw/customer/config/**</exclude>
+                        <exclude>com/pamperpaw/customer/dto/**</exclude>
+                        <exclude>com/pamperpaw/customer/entity/**</exclude>
+                        <exclude>com/pamperpaw/customer/exception/**</exclude>
+                        <exclude>com/pamperpaw/customer/CustomerServiceApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

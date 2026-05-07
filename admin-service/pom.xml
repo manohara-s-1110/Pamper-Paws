@@ -183,6 +183,15 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.12</version>
+				<configuration>
+					<excludes>
+						<exclude>com/pamperpaw/admin/config/**</exclude>
+						<exclude>com/pamperpaw/admin/dto/**</exclude>
+						<exclude>com/pamperpaw/admin/entity/**</exclude>
+						<exclude>com/pamperpaw/admin/exception/**</exclude>
+						<exclude>com/pamperpaw/admin/AdminServiceApplication.class</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>

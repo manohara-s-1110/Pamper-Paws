@@ -47,6 +47,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use the veterinarian registration endpoint for vet accounts");
         }
 
+        validateCustomerProfile(request);
         createAuthUser(username, request.getPassword(), role);
 
         try {
@@ -164,8 +165,6 @@ public class AuthService {
     }
 
     private CustomerProfileRequest toCustomerProfileRequest(RegisterRequest request, String username) {
-        validateCustomerProfile(request);
-
         CustomerProfileRequest profileRequest = new CustomerProfileRequest();
         profileRequest.setUsername(username);
         profileRequest.setName(request.getName().trim());

@@ -158,6 +158,15 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/pamperpaw/auth/config/**</exclude>
+                        <exclude>com/pamperpaw/auth/dto/**</exclude>
+                        <exclude>com/pamperpaw/auth/entity/**</exclude>
+                        <exclude>com/pamperpaw/auth/exception/**</exclude>
+                        <exclude>com/pamperpaw/auth/AuthServiceApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

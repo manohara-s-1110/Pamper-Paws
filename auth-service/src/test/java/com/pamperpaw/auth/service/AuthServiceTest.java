@@ -3,8 +3,10 @@ package com.pamperpaw.auth.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pamperpaw.auth.client.CustomerClient;
 import com.pamperpaw.auth.client.VetClient;
+import com.pamperpaw.auth.dto.ChangePasswordRequest;
 import com.pamperpaw.auth.dto.LoginRequest;
 import com.pamperpaw.auth.dto.RegisterRequest;
+import com.pamperpaw.auth.dto.VetRegisterRequest;
 import com.pamperpaw.auth.entity.User;
 import com.pamperpaw.auth.repository.UserRepository;
 import com.pamperpaw.auth.util.JwtUtil;
@@ -123,6 +125,109 @@ class AuthServiceTest {
     }
 
     @Test
+    void registerRejectsVetRoleFromCustomerEndpoint() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("vetuser");
+        request.setPassword("secret");
+        request.setRole("VET");
+
+        ResponseStatusException exception =
+                assertThrows(ResponseStatusException.class, () -> authService.register(request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    }
+
+    @Test
+    void registerRejectsMissingCustomerProfileFields() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("manu");
+        request.setPassword("secret");
+        request.setRole("CUSTOMER");
+        request.setName("Manu");
+        request.setEmail("");
+        request.setPhone("9876543210");
+        request.setAddress("Coimbatore");
+
+        ResponseStatusException exception =
+                assertThrows(ResponseStatusException.class, () -> authService.register(request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    }
+
+    @Test
+    void registerRollsBackAuthUserWhenCustomerServiceFails() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("manu");
+        request.setPassword("secret");
+        request.setRole("CUSTOMER");
+        request.setName("Manu");
+        request.setEmail("manu@example.com");
+        request.setPhone("9876543210");
+        request.setAddress("Coimbatore");
+
+        when(userRepository.findByUsername("manu")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("secret")).thenReturn("encoded");
+        when(customerClient.createCustomer(any())).thenThrow(new RuntimeException("down"));
+        when(customerClient.getCustomerByUsername("manu")).thenThrow(new RuntimeException("missing"));
+
+        ResponseStatusException exception =
+                assertThrows(ResponseStatusException.class, () -> authService.register(request));
+
+        assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
+        verify(userRepository).deleteByUsername("manu");
+    }
+
+    @Test
+    void registerVetCreatesAuthUserAndVetProfile() {
+        VetRegisterRequest request = new VetRegisterRequest();
+        request.setUsername("vet1");
+        request.setPassword("secret");
+        request.setName("Dr Vet");
+        request.setPhone("9876543210");
+        request.setEmail("vet@example.com");
+        request.setSpecialization("Surgery");
+        request.setExperience(6);
+        request.setClinicAddress("Chennai");
+        request.setAvailableDays("Mon");
+        request.setAvailableTime("10 AM - 1 PM");
+        request.setConsultationFee(java.math.BigDecimal.valueOf(500));
+
+        when(userRepository.findByUsername("vet1")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("secret")).thenReturn("encoded");
+        when(vetClient.createVet(any())).thenReturn(new Object());
+
+        assertEquals("Veterinarian account created successfully", authService.registerVet(request));
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void registerVetRollsBackWhenVetServiceFails() {
+        VetRegisterRequest request = new VetRegisterRequest();
+        request.setUsername("vet1");
+        request.setPassword("secret");
+        request.setName("Dr Vet");
+        request.setPhone("9876543210");
+        request.setEmail("vet@example.com");
+        request.setSpecialization("Surgery");
+        request.setExperience(6);
+        request.setClinicAddress("Chennai");
+        request.setAvailableDays("Mon");
+        request.setAvailableTime("10 AM - 1 PM");
+        request.setConsultationFee(java.math.BigDecimal.valueOf(500));
+
+        when(userRepository.findByUsername("vet1")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("secret")).thenReturn("encoded");
+        when(vetClient.createVet(any())).thenThrow(new RuntimeException("down"));
+        when(vetClient.getVetByUsername("vet1")).thenThrow(new RuntimeException("missing"));
+
+        ResponseStatusException exception =
+                assertThrows(ResponseStatusException.class, () -> authService.registerVet(request));
+
+        assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
+        verify(userRepository).deleteByUsername("vet1");
+    }
+
+    @Test
     void loginReturnsJwtWhenCredentialsAreValid() {
         LoginRequest request = new LoginRequest();
         request.setUsername("  manu ");
@@ -164,6 +269,18 @@ class AuthServiceTest {
     }
 
     @Test
+    void loginRejectsMissingUser() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("missing");
+        request.setPassword("secret");
+
+        when(userRepository.findByUsername("missing")).thenReturn(Optional.empty());
+
+        assertEquals(HttpStatus.UNAUTHORIZED,
+                assertThrows(ResponseStatusException.class, () -> authService.login(request)).getStatusCode());
+    }
+
+    @Test
     void loginUpgradesPlainTextPasswordAfterSuccessfulMatch() {
         LoginRequest request = new LoginRequest();
         request.setUsername("testadmin");
@@ -183,5 +300,112 @@ class AuthServiceTest {
         assertEquals("admin-jwt", token);
         verify(userRepository).save(user);
         assertEquals("$2a$10$hashed-admin", user.getPassword());
+    }
+
+    @Test
+    void changePasswordUpdatesWhenCurrentPasswordMatches() {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("old");
+        request.setNewPassword("new");
+
+        User user = new User();
+        user.setUsername("manu");
+        user.setPassword("$2a$10$old");
+        user.setRole("CUSTOMER");
+
+        when(jwtUtil.validateToken("token")).thenReturn(true);
+        when(jwtUtil.extractUsername("token")).thenReturn("manu");
+        when(userRepository.findByUsername("manu")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("old", "$2a$10$old")).thenReturn(true);
+        when(passwordEncoder.matches("new", "$2a$10$old")).thenReturn(false);
+        when(passwordEncoder.encode("new")).thenReturn("$2a$10$new");
+
+        assertEquals("Password updated successfully", authService.changePassword("Bearer token", request));
+        assertEquals("$2a$10$new", user.getPassword());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void changePasswordRejectsMissingBearerToken() {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+
+        assertEquals(HttpStatus.UNAUTHORIZED,
+                assertThrows(ResponseStatusException.class, () -> authService.changePassword(null, request)).getStatusCode());
+    }
+
+    @Test
+    void changePasswordRejectsInvalidToken() {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+
+        when(jwtUtil.validateToken("bad")).thenReturn(false);
+
+        assertEquals(HttpStatus.UNAUTHORIZED,
+                assertThrows(ResponseStatusException.class, () -> authService.changePassword("Bearer bad", request)).getStatusCode());
+    }
+
+    @Test
+    void changePasswordRejectsSameNewPassword() {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("old");
+        request.setNewPassword("old");
+
+        User user = new User();
+        user.setUsername("manu");
+        user.setPassword("$2a$10$old");
+
+        when(jwtUtil.validateToken("token")).thenReturn(true);
+        when(jwtUtil.extractUsername("token")).thenReturn("manu");
+        when(userRepository.findByUsername("manu")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("old", "$2a$10$old")).thenReturn(true);
+
+        assertEquals(HttpStatus.BAD_REQUEST,
+                assertThrows(ResponseStatusException.class, () -> authService.changePassword("Bearer token", request)).getStatusCode());
+    }
+
+    @Test
+    void changePasswordRejectsUnknownUser() {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+
+        when(jwtUtil.validateToken("token")).thenReturn(true);
+        when(jwtUtil.extractUsername("token")).thenReturn("missing");
+        when(userRepository.findByUsername("missing")).thenReturn(Optional.empty());
+
+        assertEquals(HttpStatus.UNAUTHORIZED,
+                assertThrows(ResponseStatusException.class, () -> authService.changePassword("Bearer token", request)).getStatusCode());
+    }
+
+    @Test
+    void changePasswordRejectsWrongCurrentPassword() {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("wrong");
+        request.setNewPassword("new");
+
+        User user = new User();
+        user.setUsername("manu");
+        user.setPassword("$2a$10$old");
+
+        when(jwtUtil.validateToken("token")).thenReturn(true);
+        when(jwtUtil.extractUsername("token")).thenReturn("manu");
+        when(userRepository.findByUsername("manu")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "$2a$10$old")).thenReturn(false);
+
+        assertEquals(HttpStatus.BAD_REQUEST,
+                assertThrows(ResponseStatusException.class, () -> authService.changePassword("Bearer token", request)).getStatusCode());
+    }
+
+    @Test
+    void loginRejectsNullStoredPassword() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("manu");
+        request.setPassword("secret");
+
+        User user = new User();
+        user.setUsername("manu");
+        user.setPassword(null);
+
+        when(userRepository.findByUsername("manu")).thenReturn(Optional.of(user));
+
+        assertEquals(HttpStatus.UNAUTHORIZED,
+                assertThrows(ResponseStatusException.class, () -> authService.login(request)).getStatusCode());
     }
 }

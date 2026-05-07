@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pamperpaw.visit.dto.VisitRequestDTO;
 import com.pamperpaw.visit.dto.VisitResponseDTO;
 import com.pamperpaw.visit.dto.UpdateVisitPaymentStatusRequest;
+import com.pamperpaw.visit.dto.UpdateVisitStatusRequest;
 import com.pamperpaw.visit.entity.PaymentMethod;
 import com.pamperpaw.visit.entity.PaymentStatus;
+import com.pamperpaw.visit.entity.VisitStatus;
 import com.pamperpaw.visit.exception.GlobalExceptionHandler;
 import com.pamperpaw.visit.exception.ResourceNotFoundException;
 import com.pamperpaw.visit.service.VisitService;
@@ -83,6 +85,11 @@ class VisitControllerTest {
         VisitResponseDTO response = buildVisitResponse();
         when(visitService.getAllVisits()).thenReturn(List.of(response));
         when(visitService.getVisitById(1L)).thenReturn(response);
+        when(visitService.getVisitsByCustomer(1L)).thenReturn(List.of(response));
+        when(visitService.getVisitsByVet(2L)).thenReturn(List.of(response));
+        when(visitService.getVisitsByPet(3L)).thenReturn(List.of(response));
+        when(visitService.getVisitsByVetAndDate(2L, "2026-04-13")).thenReturn(List.of(response));
+        when(visitService.getUnavailableSlots(2L, "2026-04-13")).thenReturn(List.of("10 AM - 11 AM"));
 
         mockMvc.perform(get("/visit"))
                 .andExpect(status().isOk())
@@ -91,6 +98,26 @@ class VisitControllerTest {
         mockMvc.perform(get("/visit/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.vetId").value(2L));
+
+        mockMvc.perform(get("/visit/customer/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].customerId").value(1L));
+
+        mockMvc.perform(get("/visit/vet/2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].vetId").value(2L));
+
+        mockMvc.perform(get("/visit/pet/3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].petId").value(3L));
+
+        mockMvc.perform(get("/visit/vet/2").param("date", "2026-04-13"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L));
+
+        mockMvc.perform(get("/visit/vet/2/unavailable-slots").param("date", "2026-04-13"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("10 AM - 11 AM"));
     }
 
     @Test
@@ -107,6 +134,14 @@ class VisitControllerTest {
                 .andExpect(status().isOk());
 
         verify(visitService).deleteVisit(1L);
+
+        mockMvc.perform(delete("/visit/customer/1"))
+                .andExpect(status().isOk());
+        verify(visitService).deleteVisitsByCustomer(1L);
+
+        mockMvc.perform(delete("/visit/pet/3"))
+                .andExpect(status().isOk());
+        verify(visitService).deleteVisitsByPet(3L);
     }
 
     @Test
@@ -122,6 +157,27 @@ class VisitControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paymentStatus").value("SUCCESS"));
+    }
+
+    @Test
+    void updateStatusAndCancelDelegateToService() throws Exception {
+        VisitResponseDTO response = buildVisitResponse();
+        response.setStatus(VisitStatus.CANCELLED);
+        UpdateVisitStatusRequest request = new UpdateVisitStatusRequest();
+        request.setStatus(VisitStatus.CANCELLED);
+
+        when(visitService.updateVisitStatus(1L, VisitStatus.CANCELLED)).thenReturn(response);
+        when(visitService.cancelVisit(1L)).thenReturn(response);
+
+        mockMvc.perform(patch("/visit/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        mockMvc.perform(post("/visit/cancel/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
     @Test
@@ -156,6 +212,7 @@ class VisitControllerTest {
         dto.setReason("Checkup");
         dto.setPaymentMethod(PaymentMethod.ONLINE);
         dto.setPaymentStatus(PaymentStatus.PENDING);
+        dto.setStatus(VisitStatus.PENDING);
         return dto;
     }
 }

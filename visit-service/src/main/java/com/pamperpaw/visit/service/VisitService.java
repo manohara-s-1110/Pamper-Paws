@@ -38,4 +38,6 @@ public interface VisitService {
     VisitResponseDTO updateVisitPaymentStatus(Long id, PaymentStatus paymentStatus);
 
     VisitResponseDTO updateVisitStatus(Long id, VisitStatus status);
+
+    VisitResponseDTO cancelVisit(Long appointmentId);
 }

@@ -5,6 +5,7 @@ import com.pamperpaw.payment.dto.*;
 import com.pamperpaw.payment.entity.Payment;
 import com.pamperpaw.payment.entity.PaymentMethod;
 import com.pamperpaw.payment.entity.PaymentStatus;
+import com.pamperpaw.payment.entity.RefundStatus;
 import com.pamperpaw.payment.exception.PaymentException;
 import com.pamperpaw.payment.exception.ResourceNotFoundException;
 import com.pamperpaw.payment.repository.PaymentRepository;
@@ -52,7 +53,7 @@ public class PaymentServiceImpl implements PaymentService {
             if (PaymentStatus.SUCCESS.equals(reconciled.getPaymentStatus())) {
                 return toInitiateResponse(reconciled);
             }
-            if (PaymentMethod.ONLINE.equals(request.getPaymentMethod())) {
+            if (PaymentMethod.ONLINE.equals(request.getPaymentMethod()) && !StringUtils.hasText(reconciled.getRazorpayOrderId())) {
                 reconciled.setRazorpayOrderId(razorpayGateway.createOrder(request.getAppointmentId(), request.getAmount()));
                 Payment saved = paymentRepository.save(reconciled);
                 log.info("Refreshed Razorpay order for pending payment id={} appointmentId={}", saved.getId(), saved.getAppointmentId());
@@ -121,26 +122,49 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponse refund(Long appointmentId) {
-        Payment payment = paymentRepository.findByAppointmentId(appointmentId)
+        Payment payment = paymentRepository.findWithLockByAppointmentId(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found for appointment: " + appointmentId));
 
-        if (PaymentStatus.REFUNDED.equals(payment.getPaymentStatus())) {
+        if (PaymentStatus.REFUNDED.equals(payment.getPaymentStatus()) || RefundStatus.SUCCESS.equals(payment.getRefundStatus())) {
+            log.info("Refund already completed appointmentId={} refundId={}", appointmentId, payment.getRefundId());
             return toResponse(payment);
         }
 
-        if (!PaymentStatus.SUCCESS.equals(payment.getPaymentStatus())) {
-            payment.setPaymentStatus(PaymentStatus.FAILED);
-            return toResponse(paymentRepository.save(payment));
+        if (!PaymentMethod.ONLINE.equals(payment.getPaymentMethod())) {
+            payment.setRefundStatus(RefundStatus.NOT_APPLICABLE);
+            paymentRepository.save(payment);
+            throw new PaymentException("Refund is not applicable for cash payments");
         }
 
-        payment.setPaymentStatus(PaymentStatus.REFUNDED);
-        payment.setRefundTransactionId("SIM-REFUND-" + payment.getAppointmentId());
-        payment.setRefundedAt(LocalDateTime.now());
-        Payment saved = paymentRepository.save(payment);
-        syncVisitPaymentStatus(saved, PaymentStatus.REFUNDED);
-        log.info("Refunded payment appointmentId={} refundTransactionId={}",
-                saved.getAppointmentId(), saved.getRefundTransactionId());
-        return toResponse(saved);
+        if (!PaymentStatus.SUCCESS.equals(payment.getPaymentStatus())) {
+            throw new PaymentException("Only successful online payments can be refunded");
+        }
+
+        String refundPaymentId = resolveRefundPaymentId(payment);
+
+        payment.setRefundStatus(RefundStatus.PENDING);
+        paymentRepository.save(payment);
+        log.info("Starting full Razorpay refund appointmentId={} orderId={} paymentId={} paymentStatus={} amount={}",
+                payment.getAppointmentId(), payment.getRazorpayOrderId(), refundPaymentId, payment.getPaymentStatus(), payment.getAmount());
+
+        try {
+            String refundId = razorpayGateway.refundPayment(refundPaymentId, payment.getAmount());
+            payment.setRefundId(refundId);
+            payment.setRefundTransactionId(refundId);
+            payment.setRefundStatus(RefundStatus.SUCCESS);
+            payment.setPaymentStatus(PaymentStatus.REFUNDED);
+            payment.setRefundedAt(LocalDateTime.now());
+            Payment saved = paymentRepository.save(payment);
+            syncVisitPaymentStatus(saved, PaymentStatus.REFUNDED);
+            log.info("Razorpay refund successful appointmentId={} refundId={}", saved.getAppointmentId(), refundId);
+            return toResponse(saved);
+        } catch (PaymentException ex) {
+            payment.setRefundStatus(RefundStatus.FAILED);
+            paymentRepository.save(payment);
+            log.warn("Razorpay refund failed appointmentId={} orderId={} paymentId={} paymentStatus={}",
+                    payment.getAppointmentId(), payment.getRazorpayOrderId(), refundPaymentId, payment.getPaymentStatus(), ex);
+            throw ex;
+        }
     }
 
     @Async
@@ -185,6 +209,34 @@ public class PaymentServiceImpl implements PaymentService {
                     return markSuccess(payment, paymentId);
                 })
                 .orElse(payment);
+    }
+
+    private String resolveRefundPaymentId(Payment payment) {
+        String storedPaymentId = payment.getTransactionId();
+        log.info("Resolving refund payment id appointmentId={} orderId={} storedPaymentId={} paymentStatus={}",
+                payment.getAppointmentId(), payment.getRazorpayOrderId(), storedPaymentId, payment.getPaymentStatus());
+
+        if (StringUtils.hasText(storedPaymentId) && storedPaymentId.startsWith("pay_")) {
+            if (razorpayGateway.isPaymentCaptured(storedPaymentId)) {
+                return storedPaymentId;
+            }
+            log.warn("Stored Razorpay payment id is not captured appointmentId={} paymentId={}",
+                    payment.getAppointmentId(), storedPaymentId);
+        }
+
+        if (StringUtils.hasText(payment.getRazorpayOrderId())) {
+            return razorpayGateway.findCapturedPaymentId(payment.getRazorpayOrderId())
+                    .map(capturedPaymentId -> {
+                        payment.setTransactionId(capturedPaymentId);
+                        paymentRepository.save(payment);
+                        log.info("Updated payment record with captured Razorpay payment id appointmentId={} orderId={} paymentId={}",
+                                payment.getAppointmentId(), payment.getRazorpayOrderId(), capturedPaymentId);
+                        return capturedPaymentId;
+                    })
+                    .orElseThrow(() -> new PaymentException("No captured Razorpay payment found for this appointment"));
+        }
+
+        throw new PaymentException("Valid Razorpay payment id is missing for this appointment");
     }
 
     private Payment markSuccess(Payment payment, String transactionId) {
@@ -232,7 +284,9 @@ public class PaymentServiceImpl implements PaymentService {
                 .paymentStatus(payment.getPaymentStatus())
                 .transactionId(payment.getTransactionId())
                 .razorpayOrderId(payment.getRazorpayOrderId())
+                .refundId(payment.getRefundId())
                 .refundTransactionId(payment.getRefundTransactionId())
+                .refundStatus(payment.getRefundStatus())
                 .refundedAt(payment.getRefundedAt())
                 .createdAt(payment.getCreatedAt())
                 .build();

@@ -115,6 +115,29 @@ class VisitServiceImplTest {
     }
 
     @Test
+    void createVisitThrowsWhenPetMissing() {
+        VisitRequestDTO request = new VisitRequestDTO();
+        request.setCustomerId(1L);
+        request.setVetId(2L);
+        request.setPetId(3L);
+        request.setVisitDate("2026-04-07");
+        request.setTimeSlot("10 AM - 11 AM");
+
+        when(customerClient.getCustomerById(1L)).thenReturn(new Object());
+        when(vetClient.getVetById(2L)).thenReturn(new Object());
+        when(customerClient.getPetById(3L)).thenThrow(new RuntimeException("missing"));
+
+        assertThrows(ResourceNotFoundException.class, () -> visitService.createVisit(request));
+    }
+
+    @Test
+    void createVisitThrowsWhenPetIdMissing() {
+        VisitRequestDTO request = new VisitRequestDTO();
+
+        assertThrows(IllegalArgumentException.class, () -> visitService.createVisit(request));
+    }
+
+    @Test
     void getVisitByIdThrowsWhenMissing() {
         when(visitRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -145,6 +168,27 @@ class VisitServiceImplTest {
     }
 
     @Test
+    void getVisitByIdReconcilesSuccessfulOnlinePayment() {
+        Visit visit = futureVisit();
+        visit.setId(22L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+        visit.setStatus(VisitStatus.PENDING);
+
+        com.pamperpaw.visit.dto.PaymentResponse payment = new com.pamperpaw.visit.dto.PaymentResponse();
+        payment.setPaymentStatus(PaymentStatus.SUCCESS);
+
+        when(visitRepository.findById(22L)).thenReturn(Optional.of(visit));
+        when(paymentClient.getPayment(22L)).thenReturn(payment);
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        VisitResponseDTO response = visitService.getVisitById(22L);
+
+        assertEquals(PaymentStatus.SUCCESS, response.getPaymentStatus());
+        assertEquals(VisitStatus.CONFIRMED, response.getStatus());
+    }
+
+    @Test
     void getAllVisitsMapsEntities() {
         Visit visit = new Visit();
         visit.setId(1L);
@@ -165,6 +209,24 @@ class VisitServiceImplTest {
 
         assertEquals(1, response.size());
         assertEquals(2L, response.get(0).getVetId());
+    }
+
+    @Test
+    void groupedLookupMethodsMapRepositoryResults() {
+        Visit visit = futureVisit();
+        visit.setStatus(VisitStatus.CONFIRMED);
+        visit.setPaymentMethod(PaymentMethod.CASH);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+
+        when(visitRepository.findByCustomerId(1L)).thenReturn(List.of(visit));
+        when(visitRepository.findByVetId(2L)).thenReturn(List.of(visit));
+        when(visitRepository.findByPetId(3L)).thenReturn(List.of(visit));
+        when(visitRepository.findByVetIdAndVisitDate(2L, "2099-05-08")).thenReturn(List.of(visit));
+
+        assertEquals(1, visitService.getVisitsByCustomer(1L).size());
+        assertEquals(1, visitService.getVisitsByVet(2L).size());
+        assertEquals(1, visitService.getVisitsByPet(3L).size());
+        assertEquals(1, visitService.getVisitsByVetAndDate(2L, "2099-05-08").size());
     }
 
     @Test
@@ -223,5 +285,356 @@ class VisitServiceImplTest {
 
         assertEquals(PaymentStatus.SUCCESS, response.getPaymentStatus());
         assertEquals(VisitStatus.CONFIRMED, response.getStatus());
+    }
+
+    @Test
+    void updateVisitPaymentStatusRefundsWhenSuccessfulPaymentIsMarkedFailed() {
+        Visit visit = futureVisit();
+        visit.setId(18L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.SUCCESS);
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
+        refund.setPaymentStatus(PaymentStatus.REFUNDED);
+
+        when(visitRepository.findById(18L)).thenReturn(Optional.of(visit));
+        when(paymentClient.refund(18L)).thenReturn(refund);
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        VisitResponseDTO response = visitService.updateVisitPaymentStatus(18L, PaymentStatus.FAILED);
+
+        assertEquals(PaymentStatus.REFUNDED, response.getPaymentStatus());
+    }
+
+    @Test
+    void updateVisitStatusUpdatesNonCancellationStatus() {
+        Visit visit = futureVisit();
+        visit.setId(19L);
+        visit.setPaymentMethod(PaymentMethod.CASH);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        when(visitRepository.findById(19L)).thenReturn(Optional.of(visit));
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        assertEquals(VisitStatus.COMPLETED, visitService.updateVisitStatus(19L, VisitStatus.COMPLETED).getStatus());
+    }
+
+    @Test
+    void cancelVisitRefundsSuccessfulOnlinePaymentBeforeCancelling() {
+        Visit visit = futureVisit();
+        visit.setId(11L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.SUCCESS);
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
+        refund.setPaymentStatus(PaymentStatus.REFUNDED);
+
+        when(visitRepository.findById(11L)).thenReturn(Optional.of(visit));
+        when(paymentClient.refund(11L)).thenReturn(refund);
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        VisitResponseDTO response = visitService.cancelVisit(11L);
+
+        assertEquals(VisitStatus.CANCELLED, response.getStatus());
+        assertEquals(PaymentStatus.REFUNDED, response.getPaymentStatus());
+        verify(paymentClient).refund(11L);
+    }
+
+    @Test
+    void cancelVisitCancelsCashAppointmentWithoutRefund() {
+        Visit visit = futureVisit();
+        visit.setId(12L);
+        visit.setPaymentMethod(PaymentMethod.CASH);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        when(visitRepository.findById(12L)).thenReturn(Optional.of(visit));
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        VisitResponseDTO response = visitService.cancelVisit(12L);
+
+        assertEquals(VisitStatus.CANCELLED, response.getStatus());
+        verify(paymentClient, never()).refund(any());
+    }
+
+    @Test
+    void cancelVisitKeepsAppointmentWhenRefundFails() {
+        Visit visit = futureVisit();
+        visit.setId(13L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.SUCCESS);
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
+        refund.setPaymentStatus(PaymentStatus.FAILED);
+
+        when(visitRepository.findById(13L)).thenReturn(Optional.of(visit));
+        when(paymentClient.refund(13L)).thenReturn(refund);
+
+        assertThrows(IllegalStateException.class, () -> visitService.cancelVisit(13L));
+        verify(visitRepository, never()).save(visit);
+    }
+
+    @Test
+    void cancelVisitRejectsAlreadyCancelledAppointment() {
+        Visit visit = futureVisit();
+        visit.setStatus(VisitStatus.CANCELLED);
+
+        when(visitRepository.findById(14L)).thenReturn(Optional.of(visit));
+
+        assertThrows(IllegalStateException.class, () -> visitService.cancelVisit(14L));
+    }
+
+    @Test
+    void updateVisitStatusDelegatesCancelledStatusToCancelFlow() {
+        Visit visit = futureVisit();
+        visit.setId(15L);
+        visit.setPaymentMethod(PaymentMethod.CASH);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        when(visitRepository.findById(15L)).thenReturn(Optional.of(visit));
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        assertEquals(VisitStatus.CANCELLED, visitService.updateVisitStatus(15L, VisitStatus.CANCELLED).getStatus());
+    }
+
+    @Test
+    void updateVisitStatusTriggersRefundForMissedPaidOnlineVisit() {
+        Visit visit = futureVisit();
+        visit.setId(16L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.SUCCESS);
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
+        refund.setPaymentStatus(PaymentStatus.REFUNDED);
+
+        when(visitRepository.findById(16L)).thenReturn(Optional.of(visit));
+        when(paymentClient.refund(16L)).thenReturn(refund);
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        VisitResponseDTO response = visitService.updateVisitStatus(16L, VisitStatus.MISSED);
+
+        assertEquals(VisitStatus.MISSED, response.getStatus());
+        assertEquals(PaymentStatus.REFUNDED, response.getPaymentStatus());
+    }
+
+    @Test
+    void getUnavailableSlotsExcludesMissedAndCancelledVisits() {
+        Visit confirmed = futureVisit();
+        confirmed.setTimeSlot("10 AM - 11 AM");
+        confirmed.setStatus(VisitStatus.CONFIRMED);
+
+        Visit cancelled = futureVisit();
+        cancelled.setTimeSlot("11 AM - 12 PM");
+        cancelled.setStatus(VisitStatus.CANCELLED);
+
+        Visit missed = futureVisit();
+        missed.setTimeSlot("12 PM - 1 PM");
+        missed.setStatus(VisitStatus.MISSED);
+
+        when(visitRepository.findByVetIdAndVisitDate(2L, "2026-05-08"))
+                .thenReturn(List.of(confirmed, cancelled, missed));
+
+        assertEquals(List.of("10 AM - 11 AM"), visitService.getUnavailableSlots(2L, "2026-05-08"));
+    }
+
+    @Test
+    void deleteVisitsByCustomerRefundsPaidOnlineVisits() {
+        Visit visit = futureVisit();
+        visit.setId(17L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.SUCCESS);
+
+        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
+        refund.setPaymentStatus(PaymentStatus.REFUNDED);
+
+        when(visitRepository.findByCustomerId(1L)).thenReturn(List.of(visit));
+        when(paymentClient.refund(17L)).thenReturn(refund);
+
+        visitService.deleteVisitsByCustomer(1L);
+
+        verify(visitRepository).deleteByCustomerId(1L);
+    }
+
+    @Test
+    void deleteVisitsByPetSkipsRefundForCashVisits() {
+        Visit visit = futureVisit();
+        visit.setId(20L);
+        visit.setPaymentMethod(PaymentMethod.CASH);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+
+        when(visitRepository.findByPetId(3L)).thenReturn(List.of(visit));
+
+        visitService.deleteVisitsByPet(3L);
+
+        verify(paymentClient, never()).refund(any());
+        verify(visitRepository).deleteByPetId(3L);
+    }
+
+    @Test
+    void createVisitRejectsBookedSlot() {
+        VisitRequestDTO request = new VisitRequestDTO();
+        request.setCustomerId(1L);
+        request.setVetId(2L);
+        request.setPetId(3L);
+        request.setVisitDate("2026-05-08");
+        request.setTimeSlot("10 AM - 11 AM");
+
+        when(customerClient.getCustomerById(1L)).thenReturn(new Object());
+        when(vetClient.getVetById(2L)).thenReturn(new Object());
+        when(customerClient.getPetById(3L)).thenReturn(new com.pamperpaw.visit.dto.PetDTO());
+        when(visitRepository.existsByVetIdAndVisitDateAndTimeSlot(2L, "2026-05-08", "10 AM - 11 AM")).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> visitService.createVisit(request));
+    }
+
+    @Test
+    void createVisitRejectsVetLeaveDay() {
+        VisitRequestDTO request = new VisitRequestDTO();
+        request.setCustomerId(1L);
+        request.setVetId(2L);
+        request.setPetId(3L);
+        request.setVisitDate("2026-05-08");
+        request.setTimeSlot("10 AM - 11 AM");
+
+        when(customerClient.getCustomerById(1L)).thenReturn(new Object());
+        when(vetClient.getVetById(2L)).thenReturn(new Object());
+        when(customerClient.getPetById(3L)).thenReturn(new com.pamperpaw.visit.dto.PetDTO());
+        when(vetClient.getLeaveDates(2L)).thenReturn(List.of("2026-05-08"));
+
+        assertThrows(IllegalStateException.class, () -> visitService.createVisit(request));
+    }
+
+    @Test
+    void createVisitRejectsMissingConsultationFee() {
+        VisitRequestDTO request = new VisitRequestDTO();
+        request.setCustomerId(1L);
+        request.setVetId(2L);
+        request.setPetId(3L);
+        request.setVisitDate("2026-05-08");
+        request.setTimeSlot("10 AM - 11 AM");
+        request.setPaymentMethod(PaymentMethod.ONLINE);
+
+        when(customerClient.getCustomerById(1L)).thenReturn(new Object());
+        when(vetClient.getVetById(2L)).thenReturn(new Object());
+        when(customerClient.getPetById(3L)).thenReturn(new com.pamperpaw.visit.dto.PetDTO());
+        when(vetClient.getLeaveDates(2L)).thenReturn(List.of());
+        when(vetClient.getVetFee(2L)).thenReturn(new VetFeeResponse(2L, BigDecimal.ZERO));
+
+        assertThrows(ResourceNotFoundException.class, () -> visitService.createVisit(request));
+    }
+
+    @Test
+    void createVisitThrowsWhenLeaveCheckFails() {
+        VisitRequestDTO request = new VisitRequestDTO();
+        request.setCustomerId(1L);
+        request.setVetId(2L);
+        request.setPetId(3L);
+        request.setVisitDate("2026-05-08");
+        request.setTimeSlot("10 AM - 11 AM");
+
+        when(customerClient.getCustomerById(1L)).thenReturn(new Object());
+        when(vetClient.getVetById(2L)).thenReturn(new Object());
+        when(customerClient.getPetById(3L)).thenReturn(new com.pamperpaw.visit.dto.PetDTO());
+        when(vetClient.getLeaveDates(2L)).thenThrow(new RuntimeException("down"));
+
+        assertThrows(ResourceNotFoundException.class, () -> visitService.createVisit(request));
+    }
+
+    @Test
+    void cancelVisitRejectsCompletedAppointment() {
+        Visit visit = futureVisit();
+        visit.setStatus(VisitStatus.COMPLETED);
+
+        when(visitRepository.findById(23L)).thenReturn(Optional.of(visit));
+
+        assertThrows(IllegalStateException.class, () -> visitService.cancelVisit(23L));
+    }
+
+    @Test
+    void cancelVisitRejectsPastAppointment() {
+        Visit visit = futureVisit();
+        visit.setVisitDate("2000-01-01");
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        when(visitRepository.findById(24L)).thenReturn(Optional.of(visit));
+
+        assertThrows(IllegalStateException.class, () -> visitService.cancelVisit(24L));
+    }
+
+    @Test
+    void cancelVisitRejectsUnsupportedSlotFormat() {
+        Visit visit = futureVisit();
+        visit.setTimeSlot("morning");
+        visit.setStatus(VisitStatus.CONFIRMED);
+
+        when(visitRepository.findById(25L)).thenReturn(Optional.of(visit));
+
+        assertThrows(IllegalStateException.class, () -> visitService.cancelVisit(25L));
+    }
+
+    @Test
+    void deleteVisitThrowsWhenRefundDoesNotComplete() {
+        Visit visit = futureVisit();
+        visit.setId(26L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.SUCCESS);
+
+        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
+        refund.setPaymentStatus(PaymentStatus.FAILED);
+
+        when(visitRepository.findById(26L)).thenReturn(Optional.of(visit));
+        when(paymentClient.refund(26L)).thenReturn(refund);
+
+        assertThrows(IllegalStateException.class, () -> visitService.deleteVisit(26L));
+    }
+
+    @Test
+    void createCashVisitIsConfirmedImmediately() {
+        VisitRequestDTO request = new VisitRequestDTO();
+        request.setCustomerId(1L);
+        request.setVetId(2L);
+        request.setPetId(3L);
+        request.setVisitDate("2026-05-08");
+        request.setTimeSlot("10 AM - 11 AM");
+        request.setReason("Checkup");
+        request.setPaymentMethod(PaymentMethod.CASH);
+
+        com.pamperpaw.visit.dto.PetDTO pet = new com.pamperpaw.visit.dto.PetDTO();
+        pet.setName("Max");
+
+        Visit saved = futureVisit();
+        saved.setId(21L);
+        saved.setStatus(VisitStatus.CONFIRMED);
+        saved.setPaymentMethod(PaymentMethod.CASH);
+        saved.setPaymentStatus(PaymentStatus.PENDING);
+
+        when(customerClient.getCustomerById(1L)).thenReturn(new Object());
+        when(vetClient.getVetById(2L)).thenReturn(new Object());
+        when(customerClient.getPetById(3L)).thenReturn(pet);
+        when(vetClient.getLeaveDates(2L)).thenReturn(List.of());
+        when(vetClient.getVetFee(2L)).thenReturn(new VetFeeResponse(2L, BigDecimal.valueOf(500)));
+        when(visitRepository.save(any(Visit.class))).thenReturn(saved);
+        when(paymentClient.initiate(any())).thenReturn(new PaymentInitiateResponse());
+
+        assertEquals(VisitStatus.CONFIRMED, visitService.createVisit(request).getStatus());
+    }
+
+    private Visit futureVisit() {
+        Visit visit = new Visit();
+        visit.setId(1L);
+        visit.setCustomerId(1L);
+        visit.setVetId(2L);
+        visit.setPetId(3L);
+        visit.setVisitDate("2099-05-08");
+        visit.setTimeSlot("10 AM - 11 AM");
+        visit.setReason("Checkup");
+        visit.setConsultationFee(BigDecimal.valueOf(500));
+        return visit;
     }
 }

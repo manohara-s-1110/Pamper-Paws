@@ -33,6 +33,10 @@ export class VisitDataService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 
+  cancelVisit(id: number) {
+    return this.http.post<Visit>(`${this.baseUrl}/cancel/${id}`, {});
+  }
+
   updateVisitStatus(id: number, status: 'COMPLETED' | 'MISSED' | 'CANCELLED') {
     return this.http.patch<Visit>(`${this.baseUrl}/${id}/status`, { status });
   }

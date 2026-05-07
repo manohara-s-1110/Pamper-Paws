@@ -99,6 +99,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         return path.startsWith("/auth/")
                 || path.equals("/swagger-ui.html")
                 || path.startsWith("/swagger-ui/")
+                || path.equals("/v3/api-docs")
                 || path.startsWith("/v3/api-docs/");
     }
 
@@ -109,6 +110,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
                     || path.startsWith("/pets")
                     || path.startsWith("/vets")
                     || path.startsWith("/visit")
+                    || path.startsWith("/visits")
                     || path.startsWith("/payments");
         }
 
@@ -130,8 +132,11 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
                     || path.equals("/vets")
                     || path.startsWith("/vets/")
                     || path.startsWith("/visit/customer/")
+                    || path.startsWith("/visits/customer/")
                     || path.matches("/visit/vet/\\d+/unavailable-slots")
+                    || path.matches("/visits/vet/\\d+/unavailable-slots")
                     || path.startsWith("/visit/pet/")
+                    || path.startsWith("/visits/pet/")
                     || path.startsWith("/payments/");
         }
 
@@ -142,6 +147,9 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         if (HttpMethod.POST.equals(method)) {
             return path.startsWith("/pets/customer/")
                     || path.equals("/visit")
+                    || path.equals("/visits")
+                    || path.matches("/visit/cancel/\\d+")
+                    || path.matches("/visits/cancel/\\d+")
                     || path.equals("/payments/initiate")
                     || path.equals("/payments/verify");
         }
@@ -159,6 +167,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
                     || path.startsWith("/vets/username/")
                     || path.startsWith("/vets/")
                     || path.startsWith("/visit/vet/")
+                    || path.startsWith("/visits/vet/")
                     || path.startsWith("/visit/pet/");
         }
 
@@ -171,7 +180,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
         }
 
         if (HttpMethod.PATCH.equals(method)) {
-            return path.matches("/visit/\\d+/status");
+            return path.matches("/visit/\\d+/status") || path.matches("/visits/\\d+/status");
         }
 
         return false;

@@ -10,4 +10,8 @@ public interface RazorpayGateway {
     boolean verifySignature(String orderId, String paymentId, String signature);
 
     Optional<String> findCapturedPaymentId(String orderId);
+
+    boolean isPaymentCaptured(String paymentId);
+
+    String refundPayment(String paymentId, BigDecimal amount);
 }

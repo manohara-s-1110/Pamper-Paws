@@ -135,6 +135,15 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/pamperpaw/visit/config/**</exclude>
+                        <exclude>com/pamperpaw/visit/dto/**</exclude>
+                        <exclude>com/pamperpaw/visit/entity/**</exclude>
+                        <exclude>com/pamperpaw/visit/exception/**</exclude>
+                        <exclude>com/pamperpaw/visit/VisitServiceApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

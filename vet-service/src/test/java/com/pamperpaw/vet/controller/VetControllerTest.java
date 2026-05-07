@@ -3,6 +3,8 @@ package com.pamperpaw.vet.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pamperpaw.vet.dto.VetDTO;
 import com.pamperpaw.vet.dto.VetFeeResponse;
+import com.pamperpaw.vet.dto.VetLeaveRequest;
+import com.pamperpaw.vet.dto.VetLeaveResponse;
 import com.pamperpaw.vet.exception.GlobalExceptionHandler;
 import com.pamperpaw.vet.exception.VetNotFoundException;
 import com.pamperpaw.vet.service.VetService;
@@ -82,9 +84,12 @@ class VetControllerTest {
         VetDTO dto = buildVet();
         when(vetService.getAllVets()).thenReturn(List.of(dto));
         when(vetService.getVetById(1L)).thenReturn(dto);
+        when(vetService.getVetByUsername("drrex")).thenReturn(dto);
         when(vetService.getVetsBySpecialization("Surgery")).thenReturn(List.of(dto));
         when(vetService.getVetsByLocation("Chennai")).thenReturn(List.of(dto));
         when(vetService.getVetsByExperience(5)).thenReturn(List.of(dto));
+        when(vetService.filterVets("Chennai", 5, "Surgery")).thenReturn(List.of(dto));
+        when(vetService.getAvailableSlots(1L, "2026-05-09")).thenReturn(List.of("10 AM - 11 AM"));
         when(vetService.getConsultationFee(1L)).thenReturn(new VetFeeResponse(1L, BigDecimal.valueOf(500)));
 
         mockMvc.perform(get("/vets"))
@@ -94,6 +99,10 @@ class VetControllerTest {
         mockMvc.perform(get("/vets/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
+
+        mockMvc.perform(get("/vets/username/drrex"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("drrex"));
 
         mockMvc.perform(get("/vets/specialization").param("specialization", "Surgery"))
                 .andExpect(status().isOk())
@@ -107,9 +116,49 @@ class VetControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].experience").value(5));
 
+        mockMvc.perform(get("/vets/filter")
+                        .param("location", "Chennai")
+                        .param("experience", "5")
+                        .param("specialization", "Surgery"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Dr Rex"));
+
+        mockMvc.perform(get("/vets/1/slots").param("date", "2026-05-09"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("10 AM - 11 AM"));
+
         mockMvc.perform(get("/vets/1/fee"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.consultationFee").value(500));
+    }
+
+    @Test
+    void leaveEndpointsDelegateToService() throws Exception {
+        VetLeaveRequest request = new VetLeaveRequest();
+        request.setDate("2026-05-09");
+        VetLeaveResponse response = VetLeaveResponse.builder()
+                .id(1L)
+                .vetId(1L)
+                .date("2026-05-09")
+                .build();
+
+        when(vetService.addLeave(1L, "2026-05-09")).thenReturn(response);
+        when(vetService.getLeaves(1L)).thenReturn(List.of(response));
+        when(vetService.getLeaveDates(1L)).thenReturn(List.of("2026-05-09"));
+
+        mockMvc.perform(post("/vets/1/leaves")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.date").value("2026-05-09"));
+
+        mockMvc.perform(get("/vets/1/leave-records"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].date").value("2026-05-09"));
+
+        mockMvc.perform(get("/vets/1/leaves"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("2026-05-09"));
     }
 
     @Test

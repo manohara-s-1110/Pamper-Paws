@@ -189,6 +189,87 @@ class JwtFilterTest {
         assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode());
     }
 
+    @Test
+    void optionsRequestAddsInternalServiceHeader() {
+        MockServerWebExchange exchange = exchangeWithoutToken(MockServerHttpRequest.options("/payments/initiate"));
+
+        applyFilter(exchange, e -> {
+            e.getAttributes().put("passed", true);
+            e.getAttributes().put("internalKey", e.getRequest().getHeaders().getFirst("X-Internal-Service-Key"));
+            return Mono.empty();
+        });
+
+        assertTrue(Boolean.TRUE.equals(exchange.getAttribute("passed")));
+        assertEquals("internal-test-key", exchange.getAttribute("internalKey"));
+    }
+
+    @Test
+    void swaggerDocsArePublic() {
+        MockServerWebExchange exchange = exchangeWithoutToken(MockServerHttpRequest.get("/v3/api-docs/payments"));
+
+        applyFilter(exchange, e -> {
+            e.getAttributes().put("passed", true);
+            return Mono.empty();
+        });
+
+        assertTrue(Boolean.TRUE.equals(exchange.getAttribute("passed")));
+    }
+
+    @Test
+    void customerRoleCanUseAllowedWriteAndPaymentEndpoints() {
+        String token = tokenForRole("CUSTOMER");
+
+        assertAllowed(MockServerHttpRequest.put("/customers/1").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.post("/visit/cancel/11").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.post("/payments/verify").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.delete("/pets/2").header("Authorization", "Bearer " + token));
+    }
+
+    @Test
+    void vetRoleCanUseAllowedScheduleEndpoints() {
+        String token = tokenForRole("VET");
+
+        assertAllowed(MockServerHttpRequest.get("/visit/vet/7").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.put("/vets/7").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.post("/vets/7/leaves").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.patch("/visits/4/status").header("Authorization", "Bearer " + token));
+    }
+
+    @Test
+    void customerRoleRejectsUnsupportedMethodPath() {
+        String token = tokenForRole("CUSTOMER");
+        MockServerWebExchange exchange = exchangeWithoutToken(
+                MockServerHttpRequest.patch("/admin/1").header("Authorization", "Bearer " + token)
+        );
+
+        applyFilter(exchange, e -> Mono.empty());
+
+        assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode());
+    }
+
+    private void assertAllowed(MockServerHttpRequest.BaseBuilder<?> requestBuilder) {
+        MockServerWebExchange exchange = exchangeWithoutToken(requestBuilder);
+
+        applyFilter(exchange, e -> {
+            e.getAttributes().put("passed", true);
+            e.getAttributes().put("username", e.getRequest().getHeaders().getFirst("X-User-Name"));
+            e.getAttributes().put("role", e.getRequest().getHeaders().getFirst("X-User-Role"));
+            return Mono.empty();
+        });
+
+        assertTrue(Boolean.TRUE.equals(exchange.getAttribute("passed")));
+        assertEquals("manu", exchange.getAttribute("username"));
+    }
+
+    private MockServerWebExchange exchangeWithoutToken(MockServerHttpRequest.BaseBuilder<?> requestBuilder) {
+        return MockServerWebExchange.from(requestBuilder.build());
+    }
+
+    private void applyFilter(MockServerWebExchange exchange, GatewayFilterChain chain) {
+        JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
+        jwtFilter.apply(new JwtFilter.Config()).filter(exchange, chain).block();
+    }
+
     private String tokenForRole(String role) {
         return Jwts.builder()
                 .subject("manu")

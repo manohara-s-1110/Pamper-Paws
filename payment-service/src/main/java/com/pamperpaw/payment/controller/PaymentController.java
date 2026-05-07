@@ -33,7 +33,7 @@ public class PaymentController {
         return paymentService.getByAppointmentId(appointmentId);
     }
 
-    @PostMapping("/{appointmentId}/refund")
+    @PostMapping({"/refund/{appointmentId}", "/{appointmentId}/refund"})
     public PaymentResponse refund(@PathVariable Long appointmentId) {
         return paymentService.refund(appointmentId);
     }

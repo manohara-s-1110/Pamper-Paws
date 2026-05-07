@@ -1,6 +1,7 @@
 package com.pamperpaw.customer.service.impl;
 
 import com.pamperpaw.customer.dto.CustomerDTO;
+import com.pamperpaw.customer.client.VisitClient;
 import com.pamperpaw.customer.entity.Customer;
 import com.pamperpaw.customer.exception.DuplicateResourceException;
 import com.pamperpaw.customer.exception.ResourceNotFoundException;
@@ -26,6 +27,9 @@ class CustomerServiceImplTest {
 
     @Mock
     private CustomerRepository customerRepository;
+
+    @Mock
+    private VisitClient visitClient;
 
     @InjectMocks
     private CustomerServiceImpl customerService;
@@ -158,6 +162,7 @@ class CustomerServiceImplTest {
 
         customerService.deleteCustomer(3L);
 
+        verify(visitClient).deleteVisitsByCustomer(3L);
         verify(customerRepository).delete(customer);
     }
 }

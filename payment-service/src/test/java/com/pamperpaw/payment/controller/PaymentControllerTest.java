@@ -55,4 +55,16 @@ class PaymentControllerTest {
 
         assertEquals(expected, controller.getPayment(7L));
     }
+
+    @Test
+    void refundDelegatesToService() {
+        PaymentResponse expected = PaymentResponse.builder()
+                .appointmentId(7L)
+                .paymentStatus(PaymentStatus.REFUNDED)
+                .build();
+
+        when(paymentService.refund(7L)).thenReturn(expected);
+
+        assertEquals(expected, controller.refund(7L));
+    }
 }

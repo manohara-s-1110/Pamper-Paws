@@ -54,6 +54,7 @@ export class CustomerAppointmentsComponent {
   readonly errorMessage = signal('');
   readonly saving = signal(false);
   readonly cancellingAppointmentId = signal<number | null>(null);
+  readonly pendingCancellation = signal<Visit | null>(null);
 
   readonly form = this.fb.nonNullable.group({
     petId: ['', Validators.required],
@@ -136,7 +137,21 @@ export class CustomerAppointmentsComponent {
   }
 
   cancelAppointment(visit: Visit) {
-    if (this.cancellingAppointmentId() || !confirm('Cancel this appointment?')) {
+    if (this.cancellingAppointmentId()) {
+      return;
+    }
+    this.pendingCancellation.set(visit);
+  }
+
+  closeCancelPopup() {
+    if (!this.cancellingAppointmentId()) {
+      this.pendingCancellation.set(null);
+    }
+  }
+
+  confirmCancellation() {
+    const visit = this.pendingCancellation();
+    if (!visit || this.cancellingAppointmentId()) {
       return;
     }
 
@@ -144,18 +159,20 @@ export class CustomerAppointmentsComponent {
     this.statusMessage.set('');
     this.errorMessage.set('');
 
-    this.visits.updateVisitStatus(visit.id, 'CANCELLED').subscribe({
+    this.visits.cancelVisit(visit.id).subscribe({
       next: (updatedVisit) => {
         this.cancellingAppointmentId.set(null);
+        this.pendingCancellation.set(null);
         this.closeDetails();
         this.appointments.update((appointments) =>
           appointments.map((appointment) => appointment.id === updatedVisit.id ? updatedVisit : appointment),
         );
-        this.statusMessage.set('Appointment cancelled successfully.');
+        const refundNote = updatedVisit.paymentStatus === 'REFUNDED' ? ' Full refund has been initiated to the original payment source.' : '';
+        this.statusMessage.set(`Appointment cancelled successfully.${refundNote}`);
       },
-      error: () => {
+      error: (error) => {
         this.cancellingAppointmentId.set(null);
-        this.errorMessage.set('Unable to cancel the appointment right now.');
+        this.errorMessage.set(error?.error?.message ?? 'Unable to cancel the appointment right now.');
       },
     });
   }

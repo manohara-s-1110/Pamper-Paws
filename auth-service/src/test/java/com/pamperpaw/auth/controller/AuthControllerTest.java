@@ -1,8 +1,10 @@
 package com.pamperpaw.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pamperpaw.auth.dto.ChangePasswordRequest;
 import com.pamperpaw.auth.dto.LoginRequest;
 import com.pamperpaw.auth.dto.RegisterRequest;
+import com.pamperpaw.auth.dto.VetRegisterRequest;
 import com.pamperpaw.auth.exception.GlobalExceptionHandler;
 import com.pamperpaw.auth.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +20,7 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -46,7 +49,7 @@ class AuthControllerTest {
     void registerDelegatesToService() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("manu");
-        request.setPassword("secret");
+        request.setPassword("Secret@123");
         request.setRole("CUSTOMER");
         request.setName("Manu");
 
@@ -65,7 +68,7 @@ class AuthControllerTest {
     void registerReturnsValidationErrorForBlankUsername() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("");
-        request.setPassword("secret");
+        request.setPassword("Secret@123");
         request.setRole("CUSTOMER");
         request.setName("Manu");
 
@@ -103,5 +106,45 @@ class AuthControllerTest {
                         .param("password", "secret"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("jwt-token"));
+    }
+
+    @Test
+    void registerVetDelegatesToService() throws Exception {
+        VetRegisterRequest request = new VetRegisterRequest();
+        request.setUsername("vet1");
+        request.setPassword("Secret@123");
+        request.setName("Dr Vet");
+        request.setPhone("9876543210");
+        request.setEmail("vet@example.com");
+        request.setSpecialization("Surgery");
+        request.setExperience(4);
+        request.setClinicAddress("Chennai");
+        request.setAvailableDays("Mon");
+        request.setAvailableTime("10 AM - 1 PM");
+        request.setConsultationFee(java.math.BigDecimal.valueOf(500));
+
+        when(authService.registerVet(request)).thenReturn("Veterinarian account created successfully");
+
+        mockMvc.perform(post("/auth/register/vet")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Veterinarian account created successfully"));
+    }
+
+    @Test
+    void changePasswordDelegatesToService() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("old");
+        request.setNewPassword("newpass");
+
+        when(authService.changePassword("Bearer token", request)).thenReturn("Password updated successfully");
+
+        mockMvc.perform(put("/auth/password")
+                        .header("Authorization", "Bearer token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Password updated successfully"));
     }
 }

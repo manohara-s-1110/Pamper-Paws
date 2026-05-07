@@ -294,4 +294,31 @@
       </div>
     </div>
   </app-modal>
+
+  <app-modal
+    [open]="!!pendingCancellation()"
+    title="Cancel appointment?"
+    eyebrow="Refund confirmation"
+    [compact]="true"
+    (close)="closeCancelPopup()"
+  >
+    <div class="modal-stack" *ngIf="pendingCancellation() as visit">
+      <div class="detail-panel">
+        <strong>{{ petName(visit.petId) }} with {{ vetName(visit.vetId) }}</strong>
+        <p>{{ visit.visitDate | date: 'fullDate' }} at {{ visit.timeSlot }}</p>
+        <p *ngIf="visit.paymentMethod === 'ONLINE' && visit.paymentStatus === 'SUCCESS'">
+          A full refund of â‚¹{{ paymentAmountForVisit(visit) }} will be sent to the original payment source after Razorpay confirms the refund.
+        </p>
+        <p *ngIf="visit.paymentMethod !== 'ONLINE' || visit.paymentStatus !== 'SUCCESS'">
+          This appointment will be cancelled. No online refund is required for this booking.
+        </p>
+      </div>
+      <div class="card-actions">
+        <button class="secondary-button small" type="button" (click)="closeCancelPopup()">Cancel</button>
+        <button class="ghost-button small danger" type="button" (click)="confirmCancellation()">
+          {{ cancellingAppointmentId() === visit.id ? 'Cancelling...' : 'Confirm cancellation' }}
+        </button>
+      </div>
+    </div>
+  </app-modal>
 </section>

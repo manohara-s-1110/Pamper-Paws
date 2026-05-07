@@ -18,6 +18,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,11 +77,86 @@ class PetServiceImplTest {
         customer.setId(1L);
         customer.setPets(List.of(pet));
 
-        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(customerRepository.existsById(1L)).thenReturn(true);
+        when(petRepository.findByCustomerId(1L)).thenReturn(List.of(pet));
 
         List<PetDTO> response = petService.getPetsByCustomer(1L);
 
         assertEquals(1, response.size());
         assertEquals("Kitty", response.get(0).getName());
+    }
+
+    @Test
+    void getPetsByCustomerThrowsWhenCustomerMissing() {
+        when(customerRepository.existsById(42L)).thenReturn(false);
+
+        assertThrows(ResourceNotFoundException.class, () -> petService.getPetsByCustomer(42L));
+    }
+
+    @Test
+    void updatePetUpdatesExistingPet() {
+        Pet pet = new Pet();
+        pet.setId(7L);
+        pet.setName("Old");
+
+        PetDTO dto = new PetDTO();
+        dto.setName("Buddy");
+        dto.setType("Dog");
+        dto.setAge(4);
+        dto.setImageUrl("dog.png");
+
+        when(petRepository.findById(7L)).thenReturn(Optional.of(pet));
+        when(petRepository.save(pet)).thenReturn(pet);
+
+        PetDTO response = petService.updatePet(7L, dto);
+
+        assertEquals("Buddy", response.getName());
+        assertEquals("Dog", response.getType());
+        assertEquals(4, response.getAge());
+    }
+
+    @Test
+    void updatePetThrowsWhenMissing() {
+        when(petRepository.findById(8L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> petService.updatePet(8L, new PetDTO()));
+    }
+
+    @Test
+    void getPetByIdReturnsPet() {
+        Pet pet = new Pet();
+        pet.setId(9L);
+        pet.setName("Max");
+        pet.setType("Dog");
+
+        when(petRepository.findById(9L)).thenReturn(Optional.of(pet));
+
+        assertEquals("Max", petService.getPetById(9L).getName());
+    }
+
+    @Test
+    void getPetByIdThrowsWhenMissing() {
+        when(petRepository.findById(9L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> petService.getPetById(9L));
+    }
+
+    @Test
+    void deletePetDeletesExistingPet() {
+        Pet pet = new Pet();
+        pet.setId(10L);
+
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+
+        petService.deletePet(10L);
+
+        verify(petRepository).delete(pet);
+    }
+
+    @Test
+    void deletePetThrowsWhenMissing() {
+        when(petRepository.findById(10L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> petService.deletePet(10L));
     }
 }

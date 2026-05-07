@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/visit")
+@RequestMapping({"/visit", "/visits"})
 public class VisitController {
 
     private final VisitService service;
@@ -63,6 +63,11 @@ public class VisitController {
     public VisitResponseDTO updateVisitStatus(@PathVariable Long id,
                                               @Valid @RequestBody UpdateVisitStatusRequest request) {
         return service.updateVisitStatus(id, request.getStatus());
+    }
+
+    @PostMapping("/cancel/{appointmentId}")
+    public VisitResponseDTO cancelVisit(@PathVariable Long appointmentId) {
+        return service.cancelVisit(appointmentId);
     }
 
     // 🔥 ADD THIS (for dashboard appointments)

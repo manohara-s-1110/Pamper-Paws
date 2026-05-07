@@ -9,6 +9,7 @@ import com.pamperpaw.payment.dto.VisitResponseDTO;
 import com.pamperpaw.payment.entity.Payment;
 import com.pamperpaw.payment.entity.PaymentMethod;
 import com.pamperpaw.payment.entity.PaymentStatus;
+import com.pamperpaw.payment.entity.RefundStatus;
 import com.pamperpaw.payment.exception.PaymentException;
 import com.pamperpaw.payment.exception.ResourceNotFoundException;
 import com.pamperpaw.payment.repository.PaymentRepository;
@@ -246,6 +247,121 @@ class PaymentServiceImplTest {
     }
 
     @Test
+    void getByAppointmentIdAsyncReturnsCompletedPayment() throws Exception {
+        when(paymentRepository.findByAppointmentId(10L)).thenReturn(Optional.of(payment(PaymentStatus.PENDING)));
+
+        PaymentResponse response = paymentService.getByAppointmentIdAsync(10L).get();
+
+        assertEquals(10L, response.getAppointmentId());
+    }
+
+    @Test
+    void refundSuccessfulOnlinePaymentCallsRazorpayAndMarksRefunded() {
+        Payment payment = payment(PaymentStatus.SUCCESS);
+        payment.setTransactionId("pay_123");
+
+        when(paymentRepository.findWithLockByAppointmentId(10L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+        when(razorpayGateway.isPaymentCaptured("pay_123")).thenReturn(true);
+        when(razorpayGateway.refundPayment("pay_123", BigDecimal.valueOf(500))).thenReturn("rfnd_123");
+
+        PaymentResponse response = paymentService.refund(10L);
+
+        assertEquals(PaymentStatus.REFUNDED, response.getPaymentStatus());
+        assertEquals(RefundStatus.SUCCESS, response.getRefundStatus());
+        assertEquals("rfnd_123", response.getRefundId());
+        assertNotNull(response.getRefundedAt());
+        verify(visitClient).updatePaymentStatus(eq(10L), any());
+    }
+
+    @Test
+    void refundIsIdempotentWhenAlreadyRefunded() {
+        Payment payment = payment(PaymentStatus.REFUNDED);
+        payment.setRefundStatus(RefundStatus.SUCCESS);
+        payment.setRefundId("rfnd_done");
+
+        when(paymentRepository.findWithLockByAppointmentId(10L)).thenReturn(Optional.of(payment));
+
+        PaymentResponse response = paymentService.refund(10L);
+
+        assertEquals("rfnd_done", response.getRefundId());
+        verifyNoInteractions(razorpayGateway);
+    }
+
+    @Test
+    void refundRejectsCashPayment() {
+        Payment payment = payment(PaymentStatus.SUCCESS);
+        payment.setPaymentMethod(PaymentMethod.CASH);
+
+        when(paymentRepository.findWithLockByAppointmentId(10L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        assertThrows(PaymentException.class, () -> paymentService.refund(10L));
+        assertEquals(RefundStatus.NOT_APPLICABLE, payment.getRefundStatus());
+        verifyNoInteractions(razorpayGateway);
+    }
+
+    @Test
+    void refundRejectsFailedPayment() {
+        when(paymentRepository.findWithLockByAppointmentId(10L)).thenReturn(Optional.of(payment(PaymentStatus.FAILED)));
+
+        assertThrows(PaymentException.class, () -> paymentService.refund(10L));
+        verifyNoInteractions(razorpayGateway);
+    }
+
+    @Test
+    void refundMarksFailedWhenRazorpayFails() {
+        Payment payment = payment(PaymentStatus.SUCCESS);
+        payment.setTransactionId("pay_123");
+
+        when(paymentRepository.findWithLockByAppointmentId(10L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+        when(razorpayGateway.isPaymentCaptured("pay_123")).thenReturn(true);
+        when(razorpayGateway.refundPayment("pay_123", BigDecimal.valueOf(500)))
+                .thenThrow(new PaymentException("Unable to process Razorpay refund"));
+
+        assertThrows(PaymentException.class, () -> paymentService.refund(10L));
+        assertEquals(RefundStatus.FAILED, payment.getRefundStatus());
+    }
+
+    @Test
+    void refundUsesCapturedPaymentFromOrderWhenStoredPaymentIdInvalid() {
+        Payment payment = payment(PaymentStatus.SUCCESS);
+        payment.setTransactionId("order_wrong");
+        payment.setRazorpayOrderId("order_123");
+
+        when(paymentRepository.findWithLockByAppointmentId(10L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+        when(razorpayGateway.findCapturedPaymentId("order_123")).thenReturn(Optional.of("pay_captured"));
+        when(razorpayGateway.refundPayment("pay_captured", BigDecimal.valueOf(500))).thenReturn("rfnd_123");
+
+        PaymentResponse response = paymentService.refund(10L);
+
+        assertEquals(PaymentStatus.REFUNDED, response.getPaymentStatus());
+        assertEquals("pay_captured", payment.getTransactionId());
+    }
+
+    @Test
+    void refundRejectsWhenNoCapturedPaymentCanBeResolved() {
+        Payment payment = payment(PaymentStatus.SUCCESS);
+        payment.setTransactionId("order_wrong");
+        payment.setRazorpayOrderId("order_123");
+
+        when(paymentRepository.findWithLockByAppointmentId(10L)).thenReturn(Optional.of(payment));
+        when(razorpayGateway.findCapturedPaymentId("order_123")).thenReturn(Optional.empty());
+
+        assertThrows(PaymentException.class, () -> paymentService.refund(10L));
+        verify(razorpayGateway, never()).refundPayment(any(), any());
+    }
+
+    @Test
+    void refundThrowsWhenPaymentMissing() {
+        when(paymentRepository.findWithLockByAppointmentId(10L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> paymentService.refund(10L));
+    }
+
+    @Test
     void initiateThrowsWhenVisitMissing() {
         when(visitClient.getVisitById(10L)).thenThrow(new RuntimeException("missing"));
 
@@ -296,6 +412,7 @@ class PaymentServiceImplTest {
                 .amount(BigDecimal.valueOf(500))
                 .paymentMethod(PaymentMethod.ONLINE)
                 .paymentStatus(status)
+                .refundStatus(RefundStatus.NOT_APPLICABLE)
                 .createdAt(LocalDateTime.now())
                 .build();
     }

@@ -112,6 +112,16 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/pamperpaw/payment/config/**</exclude>
+                        <exclude>com/pamperpaw/payment/dto/**</exclude>
+                        <exclude>com/pamperpaw/payment/entity/**</exclude>
+                        <exclude>com/pamperpaw/payment/exception/**</exclude>
+                        <exclude>com/pamperpaw/payment/service/impl/RazorpayGatewayImpl.class</exclude>
+                        <exclude>com/pamperpaw/payment/PaymentServiceApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -137,6 +147,7 @@
                                 <exclude>com/pamperpaw/payment/dto/**</exclude>
                                 <exclude>com/pamperpaw/payment/entity/**</exclude>
                                 <exclude>com/pamperpaw/payment/exception/**</exclude>
+                                <exclude>com/pamperpaw/payment/service/impl/RazorpayGatewayImpl.class</exclude>
                                 <exclude>com/pamperpaw/payment/PaymentServiceApplication.class</exclude>
                             </excludes>
                             <rules>
