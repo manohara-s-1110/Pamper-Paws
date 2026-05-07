@@ -189,6 +189,48 @@ class VisitServiceImplTest {
     }
 
     @Test
+    void getVisitByIdLeavesPendingPaymentUnchangedWhenPaymentIsNotSuccessful() {
+        Visit visit = futureVisit();
+        visit.setId(29L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+        visit.setStatus(VisitStatus.PENDING);
+
+        com.pamperpaw.visit.dto.PaymentResponse payment = new com.pamperpaw.visit.dto.PaymentResponse();
+        payment.setPaymentStatus(PaymentStatus.FAILED);
+
+        when(visitRepository.findById(29L)).thenReturn(Optional.of(visit));
+        when(paymentClient.getPayment(29L)).thenReturn(payment);
+
+        VisitResponseDTO response = visitService.getVisitById(29L);
+
+        assertEquals(PaymentStatus.PENDING, response.getPaymentStatus());
+        assertEquals(VisitStatus.PENDING, response.getStatus());
+        verify(visitRepository, never()).save(visit);
+    }
+
+    @Test
+    void getVisitByIdReconcilesPaymentWithoutChangingNonPendingStatus() {
+        Visit visit = futureVisit();
+        visit.setId(30L);
+        visit.setPaymentMethod(PaymentMethod.ONLINE);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+        visit.setStatus(VisitStatus.COMPLETED);
+
+        com.pamperpaw.visit.dto.PaymentResponse payment = new com.pamperpaw.visit.dto.PaymentResponse();
+        payment.setPaymentStatus(PaymentStatus.SUCCESS);
+
+        when(visitRepository.findById(30L)).thenReturn(Optional.of(visit));
+        when(paymentClient.getPayment(30L)).thenReturn(payment);
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        VisitResponseDTO response = visitService.getVisitById(30L);
+
+        assertEquals(PaymentStatus.SUCCESS, response.getPaymentStatus());
+        assertEquals(VisitStatus.COMPLETED, response.getStatus());
+    }
+
+    @Test
     void getAllVisitsMapsEntities() {
         Visit visit = new Visit();
         visit.setId(1L);
@@ -288,23 +330,63 @@ class VisitServiceImplTest {
     }
 
     @Test
-    void updateVisitPaymentStatusRefundsWhenSuccessfulPaymentIsMarkedFailed() {
+    void updateVisitPaymentStatusThrowsWhenVisitMissing() {
+        when(visitRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> visitService.updateVisitPaymentStatus(404L, PaymentStatus.SUCCESS));
+        verify(visitRepository, never()).save(any());
+    }
+
+    @Test
+    void updateVisitPaymentStatusDoesNotConfirmWhenPaymentFailed() {
+        Visit visit = futureVisit();
+        visit.setId(27L);
+        visit.setPaymentMethod(PaymentMethod.CASH);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+        visit.setStatus(VisitStatus.PENDING);
+
+        when(visitRepository.findById(27L)).thenReturn(Optional.of(visit));
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        VisitResponseDTO response = visitService.updateVisitPaymentStatus(27L, PaymentStatus.FAILED);
+
+        assertEquals(PaymentStatus.FAILED, response.getPaymentStatus());
+        assertEquals(VisitStatus.PENDING, response.getStatus());
+    }
+
+    @Test
+    void updateVisitPaymentStatusSuccessDoesNotOverwriteCompletedStatus() {
+        Visit visit = futureVisit();
+        visit.setId(31L);
+        visit.setPaymentMethod(PaymentMethod.CASH);
+        visit.setPaymentStatus(PaymentStatus.PENDING);
+        visit.setStatus(VisitStatus.COMPLETED);
+
+        when(visitRepository.findById(31L)).thenReturn(Optional.of(visit));
+        when(visitRepository.save(visit)).thenReturn(visit);
+
+        VisitResponseDTO response = visitService.updateVisitPaymentStatus(31L, PaymentStatus.SUCCESS);
+
+        assertEquals(PaymentStatus.SUCCESS, response.getPaymentStatus());
+        assertEquals(VisitStatus.COMPLETED, response.getStatus());
+    }
+
+    @Test
+    void updateVisitPaymentStatusCanMarkSuccessfulPaymentFailedDirectly() {
         Visit visit = futureVisit();
         visit.setId(18L);
         visit.setPaymentMethod(PaymentMethod.ONLINE);
         visit.setPaymentStatus(PaymentStatus.SUCCESS);
         visit.setStatus(VisitStatus.CONFIRMED);
 
-        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
-        refund.setPaymentStatus(PaymentStatus.REFUNDED);
-
         when(visitRepository.findById(18L)).thenReturn(Optional.of(visit));
-        when(paymentClient.refund(18L)).thenReturn(refund);
         when(visitRepository.save(visit)).thenReturn(visit);
 
         VisitResponseDTO response = visitService.updateVisitPaymentStatus(18L, PaymentStatus.FAILED);
 
-        assertEquals(PaymentStatus.REFUNDED, response.getPaymentStatus());
+        assertEquals(PaymentStatus.FAILED, response.getPaymentStatus());
+        verify(paymentClient).getPayment(18L);
     }
 
     @Test
@@ -322,29 +404,34 @@ class VisitServiceImplTest {
     }
 
     @Test
-    void cancelVisitRefundsSuccessfulOnlinePaymentBeforeCancelling() {
+    void updateVisitStatusThrowsWhenVisitMissing() {
+        when(visitRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> visitService.updateVisitStatus(404L, VisitStatus.COMPLETED));
+        verify(visitRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelVisitCancelsSuccessfulOnlinePaymentWithoutPaymentClientCall() {
         Visit visit = futureVisit();
         visit.setId(11L);
         visit.setPaymentMethod(PaymentMethod.ONLINE);
         visit.setPaymentStatus(PaymentStatus.SUCCESS);
         visit.setStatus(VisitStatus.CONFIRMED);
 
-        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
-        refund.setPaymentStatus(PaymentStatus.REFUNDED);
-
         when(visitRepository.findById(11L)).thenReturn(Optional.of(visit));
-        when(paymentClient.refund(11L)).thenReturn(refund);
         when(visitRepository.save(visit)).thenReturn(visit);
 
         VisitResponseDTO response = visitService.cancelVisit(11L);
 
         assertEquals(VisitStatus.CANCELLED, response.getStatus());
-        assertEquals(PaymentStatus.REFUNDED, response.getPaymentStatus());
-        verify(paymentClient).refund(11L);
+        assertEquals(PaymentStatus.SUCCESS, response.getPaymentStatus());
+        verifyNoInteractions(paymentClient);
     }
 
     @Test
-    void cancelVisitCancelsCashAppointmentWithoutRefund() {
+    void cancelVisitCancelsCashAppointment() {
         Visit visit = futureVisit();
         visit.setId(12L);
         visit.setPaymentMethod(PaymentMethod.CASH);
@@ -357,25 +444,33 @@ class VisitServiceImplTest {
         VisitResponseDTO response = visitService.cancelVisit(12L);
 
         assertEquals(VisitStatus.CANCELLED, response.getStatus());
-        verify(paymentClient, never()).refund(any());
+        verifyNoInteractions(paymentClient);
     }
 
     @Test
-    void cancelVisitKeepsAppointmentWhenRefundFails() {
+    void cancelVisitThrowsWhenMissing() {
+        when(visitRepository.findById(13L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> visitService.cancelVisit(13L));
+        verify(visitRepository, never()).save(any());
+    }
+
+    @Test
+    void updateVisitStatusMarksMissedWithoutPaymentClientCall() {
         Visit visit = futureVisit();
-        visit.setId(13L);
+        visit.setId(16L);
         visit.setPaymentMethod(PaymentMethod.ONLINE);
         visit.setPaymentStatus(PaymentStatus.SUCCESS);
         visit.setStatus(VisitStatus.CONFIRMED);
 
-        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
-        refund.setPaymentStatus(PaymentStatus.FAILED);
+        when(visitRepository.findById(16L)).thenReturn(Optional.of(visit));
+        when(visitRepository.save(visit)).thenReturn(visit);
 
-        when(visitRepository.findById(13L)).thenReturn(Optional.of(visit));
-        when(paymentClient.refund(13L)).thenReturn(refund);
+        VisitResponseDTO response = visitService.updateVisitStatus(16L, VisitStatus.MISSED);
 
-        assertThrows(IllegalStateException.class, () -> visitService.cancelVisit(13L));
-        verify(visitRepository, never()).save(visit);
+        assertEquals(VisitStatus.MISSED, response.getStatus());
+        assertEquals(PaymentStatus.SUCCESS, response.getPaymentStatus());
+        verifyNoInteractions(paymentClient);
     }
 
     @Test
@@ -403,27 +498,6 @@ class VisitServiceImplTest {
     }
 
     @Test
-    void updateVisitStatusTriggersRefundForMissedPaidOnlineVisit() {
-        Visit visit = futureVisit();
-        visit.setId(16L);
-        visit.setPaymentMethod(PaymentMethod.ONLINE);
-        visit.setPaymentStatus(PaymentStatus.SUCCESS);
-        visit.setStatus(VisitStatus.CONFIRMED);
-
-        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
-        refund.setPaymentStatus(PaymentStatus.REFUNDED);
-
-        when(visitRepository.findById(16L)).thenReturn(Optional.of(visit));
-        when(paymentClient.refund(16L)).thenReturn(refund);
-        when(visitRepository.save(visit)).thenReturn(visit);
-
-        VisitResponseDTO response = visitService.updateVisitStatus(16L, VisitStatus.MISSED);
-
-        assertEquals(VisitStatus.MISSED, response.getStatus());
-        assertEquals(PaymentStatus.REFUNDED, response.getPaymentStatus());
-    }
-
-    @Test
     void getUnavailableSlotsExcludesMissedAndCancelledVisits() {
         Visit confirmed = futureVisit();
         confirmed.setTimeSlot("10 AM - 11 AM");
@@ -444,25 +518,28 @@ class VisitServiceImplTest {
     }
 
     @Test
-    void deleteVisitsByCustomerRefundsPaidOnlineVisits() {
+    void deleteVisitsByCustomerDeletesPaidOnlineVisitsDirectly() {
         Visit visit = futureVisit();
         visit.setId(17L);
         visit.setPaymentMethod(PaymentMethod.ONLINE);
         visit.setPaymentStatus(PaymentStatus.SUCCESS);
 
-        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
-        refund.setPaymentStatus(PaymentStatus.REFUNDED);
-
-        when(visitRepository.findByCustomerId(1L)).thenReturn(List.of(visit));
-        when(paymentClient.refund(17L)).thenReturn(refund);
-
         visitService.deleteVisitsByCustomer(1L);
 
+        verify(paymentClient).deletePaymentsByUser(1L);
         verify(visitRepository).deleteByCustomerId(1L);
     }
 
     @Test
-    void deleteVisitsByPetSkipsRefundForCashVisits() {
+    void deleteVisitsByCustomerThrowsWhenPaymentDeleteFails() {
+        doThrow(new RuntimeException("payment service down")).when(paymentClient).deletePaymentsByUser(1L);
+
+        assertThrows(IllegalStateException.class, () -> visitService.deleteVisitsByCustomer(1L));
+        verify(visitRepository, never()).deleteByCustomerId(any());
+    }
+
+    @Test
+    void deleteVisitsByPetDeletesPaymentsForExistingVisits() {
         Visit visit = futureVisit();
         visit.setId(20L);
         visit.setPaymentMethod(PaymentMethod.CASH);
@@ -472,7 +549,7 @@ class VisitServiceImplTest {
 
         visitService.deleteVisitsByPet(3L);
 
-        verify(paymentClient, never()).refund(any());
+        verify(paymentClient).deletePayment(20L);
         verify(visitRepository).deleteByPetId(3L);
     }
 
@@ -530,6 +607,46 @@ class VisitServiceImplTest {
     }
 
     @Test
+    void createVisitRejectsNullConsultationFee() {
+        VisitRequestDTO request = new VisitRequestDTO();
+        request.setCustomerId(1L);
+        request.setVetId(2L);
+        request.setPetId(3L);
+        request.setVisitDate("2026-05-08");
+        request.setTimeSlot("10 AM - 11 AM");
+        request.setPaymentMethod(PaymentMethod.ONLINE);
+
+        when(customerClient.getCustomerById(1L)).thenReturn(new Object());
+        when(vetClient.getVetById(2L)).thenReturn(new Object());
+        when(customerClient.getPetById(3L)).thenReturn(new com.pamperpaw.visit.dto.PetDTO());
+        when(vetClient.getLeaveDates(2L)).thenReturn(List.of());
+        when(vetClient.getVetFee(2L)).thenReturn(new VetFeeResponse(2L, null));
+
+        assertThrows(ResourceNotFoundException.class, () -> visitService.createVisit(request));
+        verify(visitRepository, never()).save(any());
+    }
+
+    @Test
+    void createVisitThrowsWhenFeeLookupFails() {
+        VisitRequestDTO request = new VisitRequestDTO();
+        request.setCustomerId(1L);
+        request.setVetId(2L);
+        request.setPetId(3L);
+        request.setVisitDate("2026-05-08");
+        request.setTimeSlot("10 AM - 11 AM");
+        request.setPaymentMethod(PaymentMethod.ONLINE);
+
+        when(customerClient.getCustomerById(1L)).thenReturn(new Object());
+        when(vetClient.getVetById(2L)).thenReturn(new Object());
+        when(customerClient.getPetById(3L)).thenReturn(new com.pamperpaw.visit.dto.PetDTO());
+        when(vetClient.getLeaveDates(2L)).thenReturn(List.of());
+        when(vetClient.getVetFee(2L)).thenThrow(new RuntimeException("fee service down"));
+
+        assertThrows(ResourceNotFoundException.class, () -> visitService.createVisit(request));
+        verify(visitRepository, never()).save(any());
+    }
+
+    @Test
     void createVisitThrowsWhenLeaveCheckFails() {
         VisitRequestDTO request = new VisitRequestDTO();
         request.setCustomerId(1L);
@@ -557,6 +674,16 @@ class VisitServiceImplTest {
     }
 
     @Test
+    void cancelVisitRejectsMissedAppointment() {
+        Visit visit = futureVisit();
+        visit.setStatus(VisitStatus.MISSED);
+
+        when(visitRepository.findById(32L)).thenReturn(Optional.of(visit));
+
+        assertThrows(IllegalStateException.class, () -> visitService.cancelVisit(32L));
+    }
+
+    @Test
     void cancelVisitRejectsPastAppointment() {
         Visit visit = futureVisit();
         visit.setVisitDate("2000-01-01");
@@ -579,19 +706,31 @@ class VisitServiceImplTest {
     }
 
     @Test
-    void deleteVisitThrowsWhenRefundDoesNotComplete() {
+    void deleteVisitDeletesSuccessfulOnlineVisitDirectly() {
         Visit visit = futureVisit();
         visit.setId(26L);
         visit.setPaymentMethod(PaymentMethod.ONLINE);
         visit.setPaymentStatus(PaymentStatus.SUCCESS);
 
-        com.pamperpaw.visit.dto.PaymentResponse refund = new com.pamperpaw.visit.dto.PaymentResponse();
-        refund.setPaymentStatus(PaymentStatus.FAILED);
-
         when(visitRepository.findById(26L)).thenReturn(Optional.of(visit));
-        when(paymentClient.refund(26L)).thenReturn(refund);
 
-        assertThrows(IllegalStateException.class, () -> visitService.deleteVisit(26L));
+        visitService.deleteVisit(26L);
+
+        verify(paymentClient).deletePayment(26L);
+        verify(visitRepository).delete(visit);
+    }
+
+    @Test
+    void deleteVisitStillDeletesVisitWhenPaymentDeleteFails() {
+        Visit visit = futureVisit();
+        visit.setId(28L);
+
+        when(visitRepository.findById(28L)).thenReturn(Optional.of(visit));
+        doThrow(new RuntimeException("payment missing")).when(paymentClient).deletePayment(28L);
+
+        visitService.deleteVisit(28L);
+
+        verify(visitRepository).delete(visit);
     }
 
     @Test

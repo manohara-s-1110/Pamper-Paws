@@ -85,6 +85,18 @@ class AdminServiceImplTest {
     }
 
     @Test
+    void getAllVisitsAsyncWrapsFeignResult() {
+        VisitDTO visit = VisitDTO.builder().id(7L).reason("Checkup").build();
+        when(visitClient.getAllVisits()).thenReturn(List.of(visit));
+
+        List<VisitDTO> visits = adminService.getAllVisitsAsync().join();
+
+        assertEquals(1, visits.size());
+        assertEquals("Checkup", visits.get(0).getReason());
+        verify(visitClient).getAllVisits();
+    }
+
+    @Test
     void addAdminSavesNewAdmin() {
         Admin admin = Admin.builder().id(1L).email("admin@test.com").name("Admin").password("secret").role("ADMIN").build();
         when(adminRepository.existsByEmail("admin@test.com")).thenReturn(false);

@@ -7,6 +7,7 @@ import com.pamperpaw.payment.dto.PaymentVerifyRequest;
 import com.pamperpaw.payment.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.CompletableFuture;
@@ -33,13 +34,20 @@ public class PaymentController {
         return paymentService.getByAppointmentId(appointmentId);
     }
 
-    @PostMapping({"/refund/{appointmentId}", "/{appointmentId}/refund"})
-    public PaymentResponse refund(@PathVariable Long appointmentId) {
-        return paymentService.refund(appointmentId);
-    }
-
     @GetMapping("/{appointmentId}/async")
     public CompletableFuture<PaymentResponse> getPaymentAsync(@PathVariable Long appointmentId) {
         return paymentService.getByAppointmentIdAsync(appointmentId);
+    }
+
+    @DeleteMapping("/{appointmentId}")
+    public ResponseEntity<Void> deletePayment(@PathVariable Long appointmentId) {
+        paymentService.deleteByAppointmentId(appointmentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/user/{userId}")
+    public ResponseEntity<Void> deletePaymentsByUser(@PathVariable Long userId) {
+        paymentService.deleteByUserId(userId);
+        return ResponseEntity.noContent().build();
     }
 }

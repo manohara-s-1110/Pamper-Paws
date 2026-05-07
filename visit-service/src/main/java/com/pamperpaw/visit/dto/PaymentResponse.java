@@ -17,9 +17,5 @@ public class PaymentResponse {
     private PaymentStatus paymentStatus;
     private String transactionId;
     private String razorpayOrderId;
-    private String refundId;
-    private String refundTransactionId;
-    private RefundStatus refundStatus;
-    private LocalDateTime refundedAt;
     private LocalDateTime createdAt;
 }

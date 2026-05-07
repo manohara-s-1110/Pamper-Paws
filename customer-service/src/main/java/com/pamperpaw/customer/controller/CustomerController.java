@@ -4,6 +4,7 @@ import com.pamperpaw.customer.dto.CustomerDTO;
 import com.pamperpaw.customer.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -42,8 +43,8 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    public String deleteCustomer(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         service.deleteCustomer(id);
-        return "Customer deleted successfully";
+        return ResponseEntity.noContent().build();
     }
 }

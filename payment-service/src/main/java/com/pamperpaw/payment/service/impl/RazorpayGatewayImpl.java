@@ -4,8 +4,6 @@ import com.pamperpaw.payment.exception.PaymentException;
 import com.pamperpaw.payment.service.RazorpayGateway;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
-import com.razorpay.Refund;
-import com.razorpay.RazorpayException;
 import com.razorpay.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
@@ -103,35 +101,6 @@ public class RazorpayGatewayImpl implements RazorpayGateway {
         } catch (Exception ex) {
             log.warn("Unable to verify Razorpay payment status paymentId={}", paymentId, ex);
             return false;
-        }
-    }
-
-    @Override
-    public String refundPayment(String paymentId, BigDecimal amount) {
-        if (!StringUtils.hasText(keyId) || !StringUtils.hasText(keySecret)) {
-            throw new PaymentException("Razorpay credentials are not configured");
-        }
-        if (!StringUtils.hasText(paymentId) || !paymentId.startsWith("pay_")) {
-            throw new PaymentException("Razorpay payment id is missing");
-        }
-
-        try {
-            RazorpayClient razorpayClient = new RazorpayClient(keyId, keySecret);
-            JSONObject refundRequest = new JSONObject();
-            long amountInPaise = amount.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).longValueExact();
-            refundRequest.put("amount", amountInPaise);
-            log.info("Sending Razorpay refund request paymentId={} payload={}", paymentId, refundRequest);
-
-            Refund refund = razorpayClient.payments.refund(paymentId, refundRequest);
-            log.info("Received Razorpay refund response paymentId={} refundId={} status={}",
-                    paymentId, refund.get("id"), refund.get("status"));
-            return refund.get("id");
-        } catch (PaymentException ex) {
-            throw ex;
-        } catch (RazorpayException ex) {
-            throw new PaymentException("Unable to process Razorpay refund: " + ex.getMessage());
-        } catch (Exception ex) {
-            throw new PaymentException("Unable to process Razorpay refund: " + ex.getMessage());
         }
     }
 }

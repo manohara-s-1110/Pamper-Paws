@@ -2,7 +2,6 @@ package com.pamperpaw.payment.dto;
 
 import com.pamperpaw.payment.entity.PaymentMethod;
 import com.pamperpaw.payment.entity.PaymentStatus;
-import com.pamperpaw.payment.entity.RefundStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -21,9 +20,5 @@ public class PaymentResponse {
     private PaymentStatus paymentStatus;
     private String transactionId;
     private String razorpayOrderId;
-    private String refundId;
-    private String refundTransactionId;
-    private RefundStatus refundStatus;
-    private LocalDateTime refundedAt;
     private LocalDateTime createdAt;
 }

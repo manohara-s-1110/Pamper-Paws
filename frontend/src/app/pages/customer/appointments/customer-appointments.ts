@@ -167,8 +167,7 @@ export class CustomerAppointmentsComponent {
         this.appointments.update((appointments) =>
           appointments.map((appointment) => appointment.id === updatedVisit.id ? updatedVisit : appointment),
         );
-        const refundNote = updatedVisit.paymentStatus === 'REFUNDED' ? ' Full refund has been initiated to the original payment source.' : '';
-        this.statusMessage.set(`Appointment cancelled successfully.${refundNote}`);
+        this.statusMessage.set('Appointment cancelled successfully.');
       },
       error: (error) => {
         this.cancellingAppointmentId.set(null);
@@ -478,6 +477,11 @@ export class CustomerAppointmentsComponent {
       && status !== 'Completed'
       && status !== 'Missed'
       && status !== 'Cancelled';
+  }
+
+  shouldShowCancel(visit: Visit) {
+    const status = this.appointmentStatus(visit);
+    return status !== 'Completed' && status !== 'Missed' && status !== 'Cancelled';
   }
 
   private markAppointmentPaymentSuccess(appointmentId: number) {

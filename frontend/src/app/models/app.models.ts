@@ -56,7 +56,7 @@ export interface Visit {
   petName?: string;
   status?: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'MISSED' | 'CANCELLED';
   paymentMethod?: 'ONLINE' | 'CASH';
-  paymentStatus?: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  paymentStatus?: 'PENDING' | 'SUCCESS' | 'FAILED';
   consultationFee?: number;
   payment?: PaymentInitiateResponse;
 }
@@ -129,7 +129,7 @@ export interface PaymentInitiateResponse {
   userId: number;
   amount: number;
   paymentMethod: 'ONLINE' | 'CASH';
-  paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
   razorpayOrderId?: string;
   razorpayKeyId?: string;
   currency?: string;
@@ -155,11 +155,9 @@ export interface Payment {
   userId: number;
   amount: number;
   paymentMethod: 'ONLINE' | 'CASH';
-  paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
   transactionId?: string;
   razorpayOrderId?: string;
-  refundTransactionId?: string;
-  refundedAt?: string;
   createdAt: string;
 }
 

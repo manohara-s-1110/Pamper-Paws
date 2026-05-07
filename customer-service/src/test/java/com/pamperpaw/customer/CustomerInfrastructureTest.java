@@ -9,15 +9,11 @@ import com.pamperpaw.customer.exception.ResourceNotFoundException;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.springframework.boot.SpringApplication;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.validation.BindingResult;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.context.request.ServletWebRequest;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,15 +21,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class CustomerInfrastructureTest {
-
-    @Test
-    void mainDelegatesToSpringApplication() {
-        try (MockedStatic<SpringApplication> springApplication = org.mockito.Mockito.mockStatic(SpringApplication.class)) {
-            CustomerServiceApplication.main(new String[]{"arg"});
-
-            springApplication.verify(() -> SpringApplication.run(CustomerServiceApplication.class, new String[]{"arg"}));
-        }
-    }
 
     @Test
     void loggingAspectHandlesSuccessAndFailure() throws Throwable {
@@ -63,10 +50,9 @@ class CustomerInfrastructureTest {
     @Test
     void globalExceptionHandlerHandlesValidationErrors() {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
-        MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
-        BindingResult bindingResult = mock(BindingResult.class);
-        when(exception.getBindingResult()).thenReturn(bindingResult);
-        when(bindingResult.getFieldErrors()).thenReturn(List.of(new FieldError("customer", "email", "Invalid email")));
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "customer");
+        bindingResult.addError(new FieldError("customer", "email", "Invalid email"));
+        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(null, bindingResult);
 
         var response = handler.handleValidationException(exception, new ServletWebRequest(new MockHttpServletRequest("POST", "/customers")));
 

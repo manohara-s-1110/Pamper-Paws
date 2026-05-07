@@ -24,7 +24,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -76,6 +75,7 @@ class CustomerControllerTest {
         CustomerDTO dto = buildCustomer();
         when(customerService.getAllCustomers()).thenReturn(List.of(dto));
         when(customerService.getCustomerById(1L)).thenReturn(dto);
+        when(customerService.getCustomerByUsername("manu")).thenReturn(dto);
 
         mockMvc.perform(get("/customers"))
                 .andExpect(status().isOk())
@@ -84,6 +84,10 @@ class CustomerControllerTest {
         mockMvc.perform(get("/customers/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
+
+        mockMvc.perform(get("/customers/username/manu"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("manu"));
     }
 
     @Test
@@ -99,10 +103,9 @@ class CustomerControllerTest {
     }
 
     @Test
-    void deleteCustomerReturnsMessage() throws Exception {
+    void deleteCustomerReturnsNoContent() throws Exception {
         mockMvc.perform(delete("/customers/1"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Customer deleted successfully"));
+                .andExpect(status().isNoContent());
 
         verify(customerService).deleteCustomer(1L);
     }

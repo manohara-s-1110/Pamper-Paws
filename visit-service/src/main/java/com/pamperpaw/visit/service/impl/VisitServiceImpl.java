@@ -108,7 +108,7 @@ public class VisitServiceImpl implements VisitService {
     public void deleteVisit(Long id) {
         Visit visit = visitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Visit not found with id: " + id));
-        triggerRefundIfNeeded(visit);
+        deletePaymentForVisit(id);
         visitRepository.delete(visit);
         log.info("Deleted visit with id={}", id);
     }
@@ -116,7 +116,7 @@ public class VisitServiceImpl implements VisitService {
     @Override
     @Transactional
     public void deleteVisitsByCustomer(Long customerId) {
-        visitRepository.findByCustomerId(customerId).forEach(this::triggerRefundIfNeeded);
+        deletePaymentsForCustomer(customerId);
         visitRepository.deleteByCustomerId(customerId);
         log.info("Deleted visits for customerId={}", customerId);
     }
@@ -124,7 +124,7 @@ public class VisitServiceImpl implements VisitService {
     @Override
     @Transactional
     public void deleteVisitsByPet(Long petId) {
-        visitRepository.findByPetId(petId).forEach(this::triggerRefundIfNeeded);
+        visitRepository.findByPetId(petId).forEach(visit -> deletePaymentForVisit(visit.getId()));
         visitRepository.deleteByPetId(petId);
         log.info("Deleted visits for petId={}", petId);
     }
@@ -260,14 +260,9 @@ public class VisitServiceImpl implements VisitService {
     public VisitResponseDTO updateVisitPaymentStatus(Long id, PaymentStatus paymentStatus) {
         Visit visit = visitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Visit not found with id: " + id));
-        PaymentStatus previousPaymentStatus = visit.getPaymentStatus();
         visit.setPaymentStatus(paymentStatus);
         if (PaymentStatus.SUCCESS.equals(paymentStatus) && VisitStatus.PENDING.equals(visit.getStatus())) {
             visit.setStatus(VisitStatus.CONFIRMED);
-        }
-        if (PaymentStatus.FAILED.equals(paymentStatus) && PaymentStatus.SUCCESS.equals(previousPaymentStatus)) {
-            visit.setPaymentStatus(previousPaymentStatus);
-            triggerRefundIfNeeded(visit);
         }
         return mapToResponse(visitRepository.save(visit));
     }
@@ -282,9 +277,6 @@ public class VisitServiceImpl implements VisitService {
         Visit visit = visitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Visit not found with id: " + id));
         visit.setStatus(status);
-        if (VisitStatus.MISSED.equals(status)) {
-            triggerRefundIfNeeded(visit);
-        }
         return mapToResponse(visitRepository.save(visit));
     }
 
@@ -297,14 +289,6 @@ public class VisitServiceImpl implements VisitService {
         validateCancellable(visit);
         log.info("Starting cancellation flow visitId={} paymentMethod={} paymentStatus={}",
                 visit.getId(), visit.getPaymentMethod(), visit.getPaymentStatus());
-
-        if (PaymentMethod.ONLINE.equals(visit.getPaymentMethod()) && PaymentStatus.SUCCESS.equals(visit.getPaymentStatus())) {
-            PaymentResponse refund = paymentClient.refund(visit.getId());
-            if (!PaymentStatus.REFUNDED.equals(refund.getPaymentStatus())) {
-                throw new IllegalStateException("Refund did not complete. Appointment was not cancelled.");
-            }
-            visit.setPaymentStatus(PaymentStatus.REFUNDED);
-        }
 
         visit.setStatus(VisitStatus.CANCELLED);
         Visit saved = visitRepository.save(visit);
@@ -324,17 +308,21 @@ public class VisitServiceImpl implements VisitService {
         }
     }
 
-    private void triggerRefundIfNeeded(Visit visit) {
-        if (!PaymentMethod.ONLINE.equals(visit.getPaymentMethod())
-                || !PaymentStatus.SUCCESS.equals(visit.getPaymentStatus())) {
-            return;
+    private void deletePaymentsForCustomer(Long customerId) {
+        try {
+            paymentClient.deletePaymentsByUser(customerId);
+        } catch (Exception ex) {
+            log.warn("Unable to delete payments for customerId={}", customerId, ex);
+            throw new IllegalStateException("Unable to delete customer payments");
         }
+    }
 
-        PaymentResponse refund = paymentClient.refund(visit.getId());
-        if (!PaymentStatus.REFUNDED.equals(refund.getPaymentStatus())) {
-            throw new IllegalStateException("Refund did not complete");
+    private void deletePaymentForVisit(Long appointmentId) {
+        try {
+            paymentClient.deletePayment(appointmentId);
+        } catch (Exception ex) {
+            log.debug("No payment record removed for appointmentId={}", appointmentId);
         }
-        visit.setPaymentStatus(refund.getPaymentStatus());
     }
 
     private void validateCancellable(Visit visit) {

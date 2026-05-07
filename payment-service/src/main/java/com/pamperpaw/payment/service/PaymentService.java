@@ -15,7 +15,9 @@ public interface PaymentService {
 
     PaymentResponse getByAppointmentId(Long appointmentId);
 
-    PaymentResponse refund(Long appointmentId);
-
     CompletableFuture<PaymentResponse> getByAppointmentIdAsync(Long appointmentId);
+
+    void deleteByAppointmentId(Long appointmentId);
+
+    void deleteByUserId(Long userId);
 }

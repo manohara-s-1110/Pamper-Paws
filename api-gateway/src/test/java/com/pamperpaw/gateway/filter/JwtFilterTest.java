@@ -123,6 +123,30 @@ class JwtFilterTest {
     }
 
     @Test
+    void allowAdminRoleToAllBackendRouteFamilies() {
+        String token = tokenForRole("ADMIN");
+
+        assertAllowed(MockServerHttpRequest.get("/customers").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.get("/pets/customer/3").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.get("/vets").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.get("/visit/customer/3").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.get("/visits/customer/3").header("Authorization", "Bearer " + token));
+        assertAllowed(MockServerHttpRequest.get("/payments/10").header("Authorization", "Bearer " + token));
+    }
+
+    @Test
+    void rejectAdminRoleOutsideBackendRoutes() {
+        String token = tokenForRole("ADMIN");
+        MockServerWebExchange exchange = exchangeWithoutToken(
+                MockServerHttpRequest.get("/unknown").header("Authorization", "Bearer " + token)
+        );
+
+        applyFilter(exchange, e -> Mono.empty());
+
+        assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
     void rejectCustomerRoleToAdminEndpoint() {
         JwtFilter jwtFilter = new JwtFilter(new JwtUtil(SECRET), "internal-test-key");
         GatewayFilter filter = jwtFilter.apply(new JwtFilter.Config());
@@ -233,6 +257,18 @@ class JwtFilterTest {
         assertAllowed(MockServerHttpRequest.put("/vets/7").header("Authorization", "Bearer " + token));
         assertAllowed(MockServerHttpRequest.post("/vets/7/leaves").header("Authorization", "Bearer " + token));
         assertAllowed(MockServerHttpRequest.patch("/visits/4/status").header("Authorization", "Bearer " + token));
+    }
+
+    @Test
+    void vetRoleRejectsUnsupportedMethodPath() {
+        String token = tokenForRole("VET");
+        MockServerWebExchange exchange = exchangeWithoutToken(
+                MockServerHttpRequest.delete("/vets/7").header("Authorization", "Bearer " + token)
+        );
+
+        applyFilter(exchange, e -> Mono.empty());
+
+        assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode());
     }
 
     @Test

@@ -49,29 +49,78 @@ class RazorpayGatewayImplTest {
     }
 
     @Test
-    void refundPaymentThrowsWhenCredentialsMissing() {
-        RazorpayGatewayImpl gateway = new RazorpayGatewayImpl();
-        ReflectionTestUtils.setField(gateway, "keyId", "");
-        ReflectionTestUtils.setField(gateway, "keySecret", "");
-
-        assertThrows(PaymentException.class, () -> gateway.refundPayment("pay_123", BigDecimal.valueOf(500)));
-    }
-
-    @Test
-    void refundPaymentRejectsInvalidPaymentId() {
-        RazorpayGatewayImpl gateway = new RazorpayGatewayImpl();
-        ReflectionTestUtils.setField(gateway, "keyId", "key");
-        ReflectionTestUtils.setField(gateway, "keySecret", "secret");
-
-        assertThrows(PaymentException.class, () -> gateway.refundPayment("order_123", BigDecimal.valueOf(500)));
-    }
-
-    @Test
     void isPaymentCapturedReturnsFalseForInvalidPaymentId() {
         RazorpayGatewayImpl gateway = new RazorpayGatewayImpl();
         ReflectionTestUtils.setField(gateway, "keyId", "key");
         ReflectionTestUtils.setField(gateway, "keySecret", "secret");
 
         assertFalse(gateway.isPaymentCaptured("order_123"));
+    }
+    
+    @Test
+    void verifySignatureReturnsFalseWhenSecretMissing() {
+
+        RazorpayGatewayImpl gateway =
+                new RazorpayGatewayImpl();
+
+        ReflectionTestUtils.setField(
+                gateway,
+                "keySecret",
+                "");
+
+        assertFalse(
+                gateway.verifySignature(
+                        "order",
+                        "payment",
+                        "signature"));
+    }
+
+    @Test
+    void createOrderThrowsWhenCurrencyMissing() {
+
+        RazorpayGatewayImpl gateway =
+                new RazorpayGatewayImpl();
+
+        ReflectionTestUtils.setField(
+                gateway,
+                "keyId",
+                "key");
+
+        ReflectionTestUtils.setField(
+                gateway,
+                "keySecret",
+                "secret");
+
+        ReflectionTestUtils.setField(
+                gateway,
+                "currency",
+                null);
+
+        assertThrows(
+                Exception.class,
+                () -> gateway.createOrder(
+                        1L,
+                        BigDecimal.valueOf(500)));
+    }
+
+    @Test
+    void isPaymentCapturedReturnsFalseWhenCredentialsMissing() {
+
+        RazorpayGatewayImpl gateway =
+                new RazorpayGatewayImpl();
+
+        ReflectionTestUtils.setField(
+                gateway,
+                "keyId",
+                "");
+
+        ReflectionTestUtils.setField(
+                gateway,
+                "keySecret",
+                "");
+
+        assertFalse(
+                gateway.isPaymentCaptured(
+                        "payment_123"));
     }
 }

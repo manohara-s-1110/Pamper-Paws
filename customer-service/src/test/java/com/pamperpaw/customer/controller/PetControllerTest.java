@@ -19,7 +19,9 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -74,6 +76,26 @@ class PetControllerTest {
         mockMvc.perform(get("/pets/customer/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").value("Dog"));
+    }
+
+    @Test
+    void getUpdateAndDeletePetDelegateToService() throws Exception {
+        PetDTO dto = buildPet();
+        when(petService.getPetById(1L)).thenReturn(dto);
+        when(petService.updatePet(org.mockito.ArgumentMatchers.eq(1L), any(PetDTO.class))).thenReturn(dto);
+
+        mockMvc.perform(get("/pets/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Bruno"));
+
+        mockMvc.perform(put("/pets/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("Dog"));
+
+        mockMvc.perform(delete("/pets/1"))
+                .andExpect(status().isOk());
     }
 
     private PetDTO buildPet() {

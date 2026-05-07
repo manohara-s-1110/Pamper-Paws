@@ -70,6 +70,19 @@ class CustomerServiceImplTest {
     }
 
     @Test
+    void createCustomerRejectsDuplicateUsername() {
+        CustomerDTO dto = new CustomerDTO();
+        dto.setUsername("manu");
+        dto.setEmail("manu@test.com");
+
+        when(customerRepository.findByEmail(dto.getEmail())).thenReturn(Optional.empty());
+        when(customerRepository.existsByUsername("manu")).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class, () -> customerService.createCustomer(dto));
+        verify(customerRepository, never()).save(any(Customer.class));
+    }
+
+    @Test
     void getCustomerByIdThrowsWhenMissing() {
         when(customerRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -164,5 +177,20 @@ class CustomerServiceImplTest {
 
         verify(visitClient).deleteVisitsByCustomer(3L);
         verify(customerRepository).delete(customer);
+    }
+
+    @Test
+    void getCustomerByUsernameReturnsMappedCustomer() {
+        Customer customer = new Customer();
+        customer.setId(4L);
+        customer.setUsername("manu");
+        customer.setName("Manu");
+        customer.setEmail("manu@test.com");
+        customer.setPhone("9876543210");
+        customer.setAddress("Chennai");
+
+        when(customerRepository.findByUsername("manu")).thenReturn(Optional.of(customer));
+
+        assertEquals("manu", customerService.getCustomerByUsername("manu").getUsername());
     }
 }

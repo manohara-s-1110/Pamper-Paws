@@ -47,16 +47,6 @@ public class Payment {
 
     private String transactionId;
     private String razorpayOrderId;
-    private String refundId;
-    private String refundTransactionId;
-
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private RefundStatus refundStatus;
-
-    private LocalDateTime refundedAt;
-
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -67,9 +57,6 @@ public class Payment {
         }
         if (paymentStatus == null) {
             paymentStatus = PaymentStatus.PENDING;
-        }
-        if (refundStatus == null) {
-            refundStatus = RefundStatus.NOT_APPLICABLE;
         }
     }
 }

@@ -178,6 +178,26 @@ class AuthServiceTest {
     }
 
     @Test
+    void registerTreatsExistingCustomerProfileAsSuccessAfterDownstreamFailure() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("manu");
+        request.setPassword("secret");
+        request.setRole("CUSTOMER");
+        request.setName("Manu");
+        request.setEmail("manu@example.com");
+        request.setPhone("9876543210");
+        request.setAddress("Coimbatore");
+
+        when(userRepository.findByUsername("manu")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("secret")).thenReturn("encoded");
+        when(customerClient.createCustomer(any())).thenThrow(new RuntimeException("timeout"));
+        when(customerClient.getCustomerByUsername("manu")).thenReturn(new Object());
+
+        assertEquals("User registered successfully", authService.register(request));
+        verify(userRepository, never()).deleteByUsername("manu");
+    }
+
+    @Test
     void registerVetCreatesAuthUserAndVetProfile() {
         VetRegisterRequest request = new VetRegisterRequest();
         request.setUsername("vet1");
@@ -225,6 +245,19 @@ class AuthServiceTest {
 
         assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
         verify(userRepository).deleteByUsername("vet1");
+    }
+
+    @Test
+    void registerVetTreatsExistingVetProfileAsSuccessAfterDownstreamFailure() {
+        VetRegisterRequest request = vetRegisterRequest();
+
+        when(userRepository.findByUsername("vet1")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("secret")).thenReturn("encoded");
+        when(vetClient.createVet(any())).thenThrow(new RuntimeException("timeout"));
+        when(vetClient.getVetByUsername("vet1")).thenReturn(new Object());
+
+        assertEquals("Veterinarian account created successfully", authService.registerVet(request));
+        verify(userRepository, never()).deleteByUsername("vet1");
     }
 
     @Test
@@ -407,5 +440,38 @@ class AuthServiceTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED,
                 assertThrows(ResponseStatusException.class, () -> authService.login(request)).getStatusCode());
+    }
+
+    @Test
+    void loginRejectsPlainTextPasswordMismatch() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("manu");
+        request.setPassword("wrong");
+
+        User user = new User();
+        user.setUsername("manu");
+        user.setPassword("secret");
+
+        when(userRepository.findByUsername("manu")).thenReturn(Optional.of(user));
+
+        assertEquals(HttpStatus.UNAUTHORIZED,
+                assertThrows(ResponseStatusException.class, () -> authService.login(request)).getStatusCode());
+        verify(userRepository, never()).save(user);
+    }
+
+    private VetRegisterRequest vetRegisterRequest() {
+        VetRegisterRequest request = new VetRegisterRequest();
+        request.setUsername("vet1");
+        request.setPassword("secret");
+        request.setName("Dr Vet");
+        request.setPhone("9876543210");
+        request.setEmail("vet@example.com");
+        request.setSpecialization("Surgery");
+        request.setExperience(6);
+        request.setClinicAddress("Chennai");
+        request.setAvailableDays("Mon");
+        request.setAvailableTime("10 AM - 1 PM");
+        request.setConsultationFee(java.math.BigDecimal.valueOf(500));
+        return request;
     }
 }

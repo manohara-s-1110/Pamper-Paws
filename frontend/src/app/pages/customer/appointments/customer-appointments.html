@@ -225,7 +225,12 @@
               >
                 Retry Payment
               </button>
-              <button class="ghost-button small danger" type="button" (click)="cancelAppointment(visit)">
+              <button
+                class="ghost-button small danger"
+                type="button"
+                *ngIf="shouldShowCancel(visit)"
+                (click)="cancelAppointment(visit)"
+              >
                 {{ cancellingAppointmentId() === visit.id ? 'Cancelling...' : 'Cancel Appointment' }}
               </button>
             </div>
@@ -287,7 +292,12 @@
         <strong>Reason for visit</strong>
         <p>{{ visit.reason }}</p>
         <div class="card-actions">
-          <button class="ghost-button small danger" type="button" (click)="cancelAppointment(visit)">
+          <button
+            class="ghost-button small danger"
+            type="button"
+            *ngIf="shouldShowCancel(visit)"
+            (click)="cancelAppointment(visit)"
+          >
             {{ cancellingAppointmentId() === visit.id ? 'Cancelling...' : 'Cancel Appointment' }}
           </button>
         </div>
@@ -298,7 +308,7 @@
   <app-modal
     [open]="!!pendingCancellation()"
     title="Cancel appointment?"
-    eyebrow="Refund confirmation"
+    eyebrow="Cancellation confirmation"
     [compact]="true"
     (close)="closeCancelPopup()"
   >
@@ -306,12 +316,7 @@
       <div class="detail-panel">
         <strong>{{ petName(visit.petId) }} with {{ vetName(visit.vetId) }}</strong>
         <p>{{ visit.visitDate | date: 'fullDate' }} at {{ visit.timeSlot }}</p>
-        <p *ngIf="visit.paymentMethod === 'ONLINE' && visit.paymentStatus === 'SUCCESS'">
-          A full refund of â‚¹{{ paymentAmountForVisit(visit) }} will be sent to the original payment source after Razorpay confirms the refund.
-        </p>
-        <p *ngIf="visit.paymentMethod !== 'ONLINE' || visit.paymentStatus !== 'SUCCESS'">
-          This appointment will be cancelled. No online refund is required for this booking.
-        </p>
+        <p>This appointment will be cancelled.</p>
       </div>
       <div class="card-actions">
         <button class="secondary-button small" type="button" (click)="closeCancelPopup()">Cancel</button>

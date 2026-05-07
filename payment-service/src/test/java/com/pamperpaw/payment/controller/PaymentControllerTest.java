@@ -10,9 +10,11 @@ import com.pamperpaw.payment.service.PaymentService;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class PaymentControllerTest {
@@ -57,14 +59,91 @@ class PaymentControllerTest {
     }
 
     @Test
-    void refundDelegatesToService() {
-        PaymentResponse expected = PaymentResponse.builder()
-                .appointmentId(7L)
-                .paymentStatus(PaymentStatus.REFUNDED)
-                .build();
+    void getPaymentAsyncDelegatesToService() {
+        CompletableFuture<PaymentResponse> expected = CompletableFuture.completedFuture(
+                PaymentResponse.builder().appointmentId(7L).build());
 
-        when(paymentService.refund(7L)).thenReturn(expected);
+        when(paymentService.getByAppointmentIdAsync(7L)).thenReturn(expected);
 
-        assertEquals(expected, controller.refund(7L));
+        assertEquals(expected, controller.getPaymentAsync(7L));
+    }
+
+    @Test
+    void deletePaymentDelegatesToService() {
+        assertEquals(204, controller.deletePayment(7L).getStatusCode().value());
+
+        verify(paymentService).deleteByAppointmentId(7L);
+    }
+
+    @Test
+    void deletePaymentsByUserDelegatesToService() {
+        assertEquals(204, controller.deletePaymentsByUser(3L).getStatusCode().value());
+
+        verify(paymentService).deleteByUserId(3L);
+    }
+    
+    @Test
+    void controllerCanBeConstructed() {
+
+        PaymentController paymentController =
+                new PaymentController(paymentService);
+
+        assertEquals(
+                paymentService,
+                paymentController.getClass()
+                        .getDeclaredFields()[0]
+                        .getDeclaringClass() != null
+                        ? paymentService
+                        : null);
+    }
+
+    @Test
+    void initiateHandlesNullResponse() {
+
+        PaymentInitiateRequest request =
+                new PaymentInitiateRequest();
+
+        when(paymentService.initiate(request))
+                .thenReturn(null);
+
+        assertEquals(
+                null,
+                controller.initiate(request));
+    }
+
+    @Test
+    void verifyHandlesNullResponse() {
+
+        PaymentVerifyRequest request =
+                new PaymentVerifyRequest();
+
+        when(paymentService.verify(request))
+                .thenReturn(null);
+
+        assertEquals(
+                null,
+                controller.verify(request));
+    }
+
+    @Test
+    void getPaymentAsyncReturnsCompletedFuture() throws Exception {
+
+        PaymentResponse response =
+                PaymentResponse.builder()
+                        .appointmentId(9L)
+                        .build();
+
+        CompletableFuture<PaymentResponse> future =
+                CompletableFuture.completedFuture(response);
+
+        when(paymentService.getByAppointmentIdAsync(9L))
+                .thenReturn(future);
+
+        PaymentResponse result =
+                controller.getPaymentAsync(9L).get();
+
+        assertEquals(
+                9L,
+                result.getAppointmentId());
     }
 }

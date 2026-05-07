@@ -20,7 +20,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -163,6 +165,17 @@ class AdminControllerTest {
         mockMvc.perform(get("/admin/visits/10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(10L));
+    }
+
+    @Test
+    void getAllVisitsAsyncDelegatesToService() {
+        CompletableFuture<List<VisitDTO>> visits = CompletableFuture.completedFuture(
+                List.of(VisitDTO.builder().id(10L).reason("Checkup").build()));
+        when(adminService.getAllVisitsAsync()).thenReturn(visits);
+
+        AdminController controller = new AdminController(adminService);
+
+        assertEquals(visits, controller.getAllVisitsAsync());
     }
 
     @Test

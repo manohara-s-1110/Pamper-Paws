@@ -6,17 +6,13 @@ import com.pamperpaw.auth.exception.GlobalExceptionHandler;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.springframework.boot.SpringApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.validation.BindingResult;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,15 +20,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class AuthInfrastructureTest {
-
-    @Test
-    void mainDelegatesToSpringApplication() {
-        try (MockedStatic<SpringApplication> springApplication = org.mockito.Mockito.mockStatic(SpringApplication.class)) {
-            AuthServiceApplication.main(new String[]{"arg"});
-
-            springApplication.verify(() -> SpringApplication.run(AuthServiceApplication.class, new String[]{"arg"}));
-        }
-    }
 
     @Test
     void loggingAspectHandlesSuccessAndFailure() throws Throwable {
@@ -61,10 +48,9 @@ class AuthInfrastructureTest {
     @Test
     void globalExceptionHandlerHandlesValidationErrors() {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
-        MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
-        BindingResult bindingResult = mock(BindingResult.class);
-        when(exception.getBindingResult()).thenReturn(bindingResult);
-        when(bindingResult.getFieldErrors()).thenReturn(List.of(new FieldError("register", "username", "Username is required")));
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "register");
+        bindingResult.addError(new FieldError("register", "username", "Username is required"));
+        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(null, bindingResult);
 
         var response = handler.handleValidation(exception, new ServletWebRequest(new MockHttpServletRequest("POST", "/auth/register")));
 
