@@ -31,7 +31,7 @@ export class CustomerDashboardComponent {
 
   readonly upcomingAppointments = computed(() =>
     [...this.appointments()]
-      .filter((visit) => getAppointmentStatus(visit) !== 'Completed')
+      .filter((visit) => getAppointmentStatus(visit) === 'Upcoming')
       .sort((left, right) => appointmentDateTimeValue(left) - appointmentDateTimeValue(right))
       .slice(0, 4),
   );

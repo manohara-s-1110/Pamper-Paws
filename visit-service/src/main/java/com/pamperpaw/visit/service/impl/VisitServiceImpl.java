@@ -129,7 +129,7 @@ public class VisitServiceImpl implements VisitService {
         log.info("Deleted visits for petId={}", petId);
     }
 
-    // 🔥 ADD THIS METHOD (for frontend dashboard)
+    //for frontend dashboard
     @Override
     public List<VisitResponseDTO> getVisitsByCustomer(Long customerId) {
 

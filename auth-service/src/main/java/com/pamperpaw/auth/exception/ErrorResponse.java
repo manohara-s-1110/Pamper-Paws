@@ -1,3 +1,5 @@
+//structured error responses
+
 package com.pamperpaw.auth.exception;
 
 import lombok.Builder;

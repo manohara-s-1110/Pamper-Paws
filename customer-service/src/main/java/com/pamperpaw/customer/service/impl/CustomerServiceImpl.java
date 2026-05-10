@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
+import com.pamperpaw.customer.client.AuthClient;
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -21,6 +21,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository repo;
     private final VisitClient visitClient;
+    private final AuthClient authClient;
 
     @Override
     public CustomerDTO createCustomer(CustomerDTO dto) {
@@ -81,6 +82,9 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
         visitClient.deleteVisitsByCustomer(id);
+
+        authClient.deleteUser(customer.getUsername());
+
         repo.delete(customer);
         log.info("Deleted customer with id={}", id);
     }

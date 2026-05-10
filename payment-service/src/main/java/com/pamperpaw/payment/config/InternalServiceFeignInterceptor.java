@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class InternalServiceFeignInterceptor implements RequestInterceptor {
-
+//internal ms authentication
     private static final String INTERNAL_SERVICE_HEADER = "X-Internal-Service-Key";
     private final String internalServiceKey;
 

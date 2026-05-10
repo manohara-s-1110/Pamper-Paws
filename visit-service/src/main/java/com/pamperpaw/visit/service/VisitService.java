@@ -24,7 +24,7 @@ public interface VisitService {
 
     void deleteVisitsByPet(Long petId);
 
-    // 🔥 ADD THIS (for frontend dashboard)
+    //for frontend dashboard
     List<VisitResponseDTO> getVisitsByCustomer(Long customerId);
 
     List<VisitResponseDTO> getVisitsByVet(Long vetId);

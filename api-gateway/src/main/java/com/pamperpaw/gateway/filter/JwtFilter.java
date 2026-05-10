@@ -19,7 +19,7 @@ public class JwtFilter extends AbstractGatewayFilterFactory<JwtFilter.Config> {
 
     private final JwtUtil jwtUtil;
     private final String internalServiceKey;
-
+//ci
     public JwtFilter(JwtUtil jwtUtil,
                      @Value("${internal.service.key}") String internalServiceKey) {
         super(Config.class);

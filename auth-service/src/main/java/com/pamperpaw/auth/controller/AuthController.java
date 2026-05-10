@@ -1,6 +1,7 @@
 package com.pamperpaw.auth.controller;
 
 import com.pamperpaw.auth.dto.LoginRequest;
+
 import com.pamperpaw.auth.dto.RegisterRequest;
 import com.pamperpaw.auth.dto.ChangePasswordRequest;
 import com.pamperpaw.auth.dto.VetRegisterRequest;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @Slf4j
 @RestController
@@ -57,5 +60,11 @@ public class AuthController {
     public String changePassword(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
                                  @Valid @RequestBody ChangePasswordRequest request) {
         return authService.changePassword(authorization, request);
+    }
+    
+    @DeleteMapping("/username/{username}")
+    public String deleteUser(@PathVariable String username) {
+        authService.deleteUser(username);
+        return "User deleted successfully";
     }
 }

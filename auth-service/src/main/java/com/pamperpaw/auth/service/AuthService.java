@@ -248,4 +248,20 @@ public class AuthService {
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
+    
+    
+    public void deleteUser(String username) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "User not found"
+                        )
+                );
+
+        userRepository.delete(user);
+
+        log.info("Deleted auth user username={}", username);
+    }
 }

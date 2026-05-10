@@ -10,14 +10,14 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
-  // ✅ REGISTER
+  // REGISTER
   register(data: any) {
     return this.http.post(`${this.baseUrl}/register`, data, {
       responseType: 'text'   // because backend returns string
     });
   }
 
-  // ✅ LOGIN
+  // LOGIN
   login(data: any) {
     return this.http.post(`${this.baseUrl}/login`, data, {
       responseType: 'text'   // JWT token comes as string
